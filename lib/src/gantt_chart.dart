@@ -17,7 +17,7 @@ class _GanttChartState extends State<GanttChart> {
   final linkedScrollController = LinkedScrollControllerGroup();
   late ScrollController labelScrollController;
   late ScrollController chartScrollController;
-  final widthPerDay = 25.0;
+  final widthPerDay = 50.0;
   final heightPerRow = 50.0;
   final labelWidth = 100.0;
   final rowSpacing = 15.0;
@@ -41,7 +41,7 @@ class _GanttChartState extends State<GanttChart> {
     });
     final firstEndDate = widget.data.fold(DateTime.now(), (previousValue, element) {
       return element.dateEnd.isAfter(previousValue) ? element.dateEnd : previousValue;
-    });
+    }).add(const Duration(days: 5));
     final maxChartWidth = (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
 
     return LayoutBuilder(builder: (context, constraints) {
@@ -99,7 +99,7 @@ class _GanttChartState extends State<GanttChart> {
                     child: Column(
                       children: [
                         Builder(builder: (context) {
-                          DateTime dateLabel = firstStartDate;
+                          DateTime dateLabel = DateTime(1999);
                           return Row(
                             children: [
                               for (int i = 0; i < maxChartWidth / widthPerDay; i++)
@@ -148,7 +148,7 @@ class _GanttChartState extends State<GanttChart> {
                               final data = widget.data[index];
                               final duration = data.dateEnd.difference(data.dateStart);
                               final width = duration.inDays * widthPerDay;
-                              final start = data.dateStart.difference(DateTime.now()).inDays * widthPerDay;
+                              final start = data.dateStart.difference(firstStartDate).inDays * widthPerDay;
 
                               return Stack(
                                 children: [
@@ -205,10 +205,7 @@ class _GanttChartState extends State<GanttChart> {
                                                         widget.data[index] = widget.data[index].copyWith(dateEnd: newEnd);
                                                       });
                                                     },
-                                                    onHorizontalDragUpdate: (details) {
-                                                      print(details.localPosition.dx);
-                                                      newWidth.value = details.localPosition.dx;
-                                                    },
+                                                    onHorizontalDragUpdate: (details) => newWidth.value = details.localPosition.dx,
                                                     child: Stack(
                                                       clipBehavior: Clip.none,
                                                       children: [

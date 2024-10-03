@@ -3,12 +3,12 @@ class DummyData {
     int counter = 0;
 
     return List.generate(50, (index) {
-      if (index % 2 == 0) {
+      if (index % 2 == 0 && index != 0) {
         counter++;
       }
       return Task(
         name: 'Task $index',
-        start: DateTime.now().add(Duration(days: counter)),
+        start: DateTime(2024, 10, 1).add(Duration(days: counter)),
         end: DateTime.now().add(Duration(days: counter + 10)),
       );
     });
