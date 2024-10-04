@@ -33,7 +33,7 @@ class MyHomePage extends StatelessWidget {
         child: Center(
           child: Column(
             children: [
-              Text('Hello, World!'),
+              const Text('Hello, Gantt!'),
               Expanded(
                 child: GanttChart<Task>(
                   data: DummyData.data.map((task) {
