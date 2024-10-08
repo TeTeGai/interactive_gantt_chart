@@ -35,15 +35,18 @@ class MyHomePage extends StatelessWidget {
             children: [
               const Text('Hello, Gantt!'),
               Expanded(
-                child: GanttChart<Task>(
-                  data: DummyData.data.map((task) {
-                    return GanttData<Task>(
-                      dateStart: task.start,
-                      dateEnd: task.end,
-                      data: task,
-                      label: task.name,
-                    );
-                  }).toList(),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GanttChart<Task>(
+                    data: DummyData.data.map((task) {
+                      return GanttData<Task>(
+                        dateStart: task.start,
+                        dateEnd: task.end,
+                        data: task,
+                        label: task.name,
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             ],

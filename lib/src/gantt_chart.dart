@@ -113,6 +113,9 @@ class _GanttChartState extends State<GanttChart> {
     }).add(Duration(days: widget.daysAfterLastTask));
     final maxChartWidth = (firstEndDate.difference(firstStartDate).inDays * widget.widthPerDay);
 
+    final dayLabelHeight = widget.heightPerRow * 0.5;
+    final realChartHeight = widget.data.length * widget.heightPerRow + dayLabelHeight;
+
     return LayoutBuilder(builder: (context, constraints) {
       return SizedBox(
         height: constraints.maxHeight,
@@ -151,190 +154,193 @@ class _GanttChartState extends State<GanttChart> {
             ),
 
             // Right side
-            SizedBox(
-              child: Column(
-                children: [
-                  // Date label for Years & month
-                  SizedBox(
-                    height: widget.heightPerRow,
-                    width: constraints.maxWidth - widget.labelWidth,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            Column(
+              children: [
+                // Date label for Years & month
+                SizedBox(
+                  height: widget.heightPerRow,
+                  width: constraints.maxWidth - widget.labelWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ValueListenableBuilder(
+                        valueListenable: dateLabel,
+                        builder: (_, value, __) {
+                          return Text(
+                            '${value.year}',
+                            style: widget.headerLabelStyle,
+                          );
+                        },
+                      ),
+                      ValueListenableBuilder(
+                        valueListenable: dateLabel,
+                        builder: (_, value, __) {
+                          return Text(
+                            DateFormat.MMMM().format(dateLabel.value),
+                            style: widget.headerLabelStyle,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Draw all gant chart here
+                Container(
+                  width: constraints.maxWidth - widget.labelWidth,
+                  height: realChartHeight > constraints.maxHeight - widget.heightPerRow ? constraints.maxHeight - widget.heightPerRow : realChartHeight,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: widget.gridLineColor),
+                      bottom: BorderSide(color: widget.gridLineColor),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    controller: chartHorizontalScrollController,
+                    child: Stack(
                       children: [
-                        ValueListenableBuilder(
-                          valueListenable: dateLabel,
-                          builder: (_, value, __) {
-                            return Text(
-                              '${value.year}',
-                              style: widget.headerLabelStyle,
-                            );
-                          },
-                        ),
-                        ValueListenableBuilder(
-                          valueListenable: dateLabel,
-                          builder: (_, value, __) {
-                            return Text(
-                              DateFormat.MMMM().format(dateLabel.value),
-                              style: widget.headerLabelStyle,
-                            );
-                          },
+                        // Vertical line for days
+                        for (int i = 0; i < maxChartWidth / widget.widthPerDay; i++)
+                          Positioned(
+                            left: i * widget.widthPerDay,
+                            child: Container(
+                              height: (realChartHeight),
+                              width: 1,
+                              color: widget.gridLineColor,
+                            ),
+                          ),
+
+                        SizedBox(
+                          width: maxChartWidth,
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  for (int i = 0; i < maxChartWidth / widget.widthPerDay; i++)
+                                    SizedBox(
+                                      width: widget.widthPerDay,
+                                      height: dayLabelHeight,
+                                      child: Center(
+                                        child: Text(
+                                          firstStartDate.add(Duration(days: i)).day.toString(),
+                                          style: widget.dayLabelStyle,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              Expanded(
+                                child: ListView.builder(
+                                  controller: chartScrollController,
+                                  itemCount: widget.data.length,
+                                  itemBuilder: (context, index) {
+                                    final data = widget.data[index];
+                                    final duration = data.dateEnd.difference(data.dateStart);
+                                    final width = duration.inDays * widget.widthPerDay;
+                                    final start = data.dateStart.difference(firstStartDate).inDays * widget.widthPerDay;
+
+                                    return Stack(
+                                      children: [
+                                        // horizontal line for rows
+                                        for (int i = 0; i < widget.data.length; i++)
+                                          Positioned(
+                                            top: i * widget.heightPerRow,
+                                            child: Container(
+                                              height: 1,
+                                              width: maxChartWidth,
+                                              color: widget.gridLineColor,
+                                            ),
+                                          ),
+
+                                        // Main Data rendering
+                                        SizedBox(
+                                          height: widget.heightPerRow,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: start,
+                                              ),
+                                              Container(
+                                                width: width,
+                                                height: widget.heightPerRow - widget.rowSpacing,
+                                                decoration: BoxDecoration(
+                                                  color: widget.chartBarColor,
+                                                  borderRadius: widget.chartBarBorderRadius,
+                                                ),
+                                                child: Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    Visibility(
+                                                      visible: widget.showLabelOnChartBar,
+                                                      child: Center(
+                                                        child: Text(data.label),
+                                                      ),
+                                                    ),
+
+                                                    // Draggable Indicator
+                                                    Positioned(
+                                                      right: 0,
+                                                      child: Builder(builder: (context) {
+                                                        final newWidth = ValueNotifier(0.0);
+                                                        return GestureDetector(
+                                                          onHorizontalDragEnd: (details) {
+                                                            final newWidth = details.localPosition.dx;
+                                                            late DateTime newEnd;
+                                                            // check if direction is right or left
+                                                            if (details.velocity.pixelsPerSecond.dx < 0) {
+                                                              newEnd = data.dateEnd.subtract(
+                                                                  Duration(days: (newWidth / widget.widthPerDay).round()));
+                                                            } else {
+                                                              newEnd = data.dateEnd
+                                                                  .add(Duration(days: (newWidth / widget.widthPerDay).round()));
+                                                            }
+                                                            setState(() {
+                                                              widget.data[index] = widget.data[index].copyWith(dateEnd: newEnd);
+                                                            });
+                                                            if (widget.onDragEnd != null) {
+                                                              widget.onDragEnd!(widget.data[index], details);
+                                                            }
+                                                          },
+                                                          onHorizontalDragUpdate: (details) => newWidth.value = details.localPosition.dx,
+                                                          child: Stack(
+                                                            clipBehavior: Clip.none,
+                                                            children: [
+                                                              ValueListenableBuilder(
+                                                                valueListenable: newWidth,
+                                                                builder: (_, value, __) {
+                                                                  return Positioned(
+                                                                    left: value,
+                                                                    child: _buildDraggableIndicator(index),
+                                                                  );
+                                                                },
+                                                              ),
+                                                              _buildDraggableIndicator(index),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      }),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-
-                  // Draw all gant chart here
-                  SizedBox(
-                    width: constraints.maxWidth - widget.labelWidth,
-                    height: constraints.maxHeight - widget.heightPerRow,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      controller: chartHorizontalScrollController,
-                      child: Stack(
-                        children: [
-                          // Vertical line for days
-                          for (int i = 0; i < maxChartWidth / widget.widthPerDay; i++)
-                            Positioned(
-                              left: i * widget.widthPerDay,
-                              child: Container(
-                                height: widget.heightPerRow * widget.data.length,
-                                width: 1,
-                                color: widget.gridLineColor,
-                              ),
-                            ),
-
-                          SizedBox(
-                            width: maxChartWidth,
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    for (int i = 0; i < maxChartWidth / widget.widthPerDay; i++)
-                                      SizedBox(
-                                        width: widget.widthPerDay,
-                                        height: widget.heightPerRow * 0.5,
-                                        child: Center(
-                                          child: Text(
-                                            firstStartDate.add(Duration(days: i)).day.toString(),
-                                            style: widget.dayLabelStyle,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                Expanded(
-                                  child: ListView.builder(
-                                    controller: chartScrollController,
-                                    itemCount: widget.data.length,
-                                    itemBuilder: (context, index) {
-                                      final data = widget.data[index];
-                                      final duration = data.dateEnd.difference(data.dateStart);
-                                      final width = duration.inDays * widget.widthPerDay;
-                                      final start = data.dateStart.difference(firstStartDate).inDays * widget.widthPerDay;
-
-                                      return Stack(
-                                        children: [
-                                          // horizontal line for rows
-                                          for (int i = 0; i < widget.data.length; i++)
-                                            Positioned(
-                                              top: i * widget.heightPerRow,
-                                              child: Container(
-                                                height: 1,
-                                                width: maxChartWidth,
-                                                color: widget.gridLineColor,
-                                              ),
-                                            ),
-
-                                          // Main Data rendering
-                                          SizedBox(
-                                            height: widget.heightPerRow,
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  width: start,
-                                                ),
-                                                Container(
-                                                  width: width,
-                                                  height: widget.heightPerRow - widget.rowSpacing,
-                                                  decoration: BoxDecoration(
-                                                    color: widget.chartBarColor,
-                                                    borderRadius: widget.chartBarBorderRadius,
-                                                  ),
-                                                  child: Stack(
-                                                    alignment: Alignment.center,
-                                                    children: [
-                                                      Visibility(
-                                                        visible: widget.showLabelOnChartBar,
-                                                        child: Center(
-                                                          child: Text(data.label),
-                                                        ),
-                                                      ),
-
-                                                      // Draggable Indicator
-                                                      Positioned(
-                                                        right: 0,
-                                                        child: Builder(builder: (context) {
-                                                          final newWidth = ValueNotifier(0.0);
-                                                          return GestureDetector(
-                                                            onHorizontalDragEnd: (details) {
-                                                              final newWidth = details.localPosition.dx;
-                                                              late DateTime newEnd;
-                                                              // check if direction is right or left
-                                                              if (details.velocity.pixelsPerSecond.dx < 0) {
-                                                                newEnd = data.dateEnd.subtract(
-                                                                    Duration(days: (newWidth / widget.widthPerDay).round()));
-                                                              } else {
-                                                                newEnd = data.dateEnd
-                                                                    .add(Duration(days: (newWidth / widget.widthPerDay).round()));
-                                                              }
-                                                              setState(() {
-                                                                widget.data[index] = widget.data[index].copyWith(dateEnd: newEnd);
-                                                              });
-                                                              if (widget.onDragEnd != null) {
-                                                                widget.onDragEnd!(widget.data[index], details);
-                                                              }
-                                                            },
-                                                            onHorizontalDragUpdate: (details) =>
-                                                                newWidth.value = details.localPosition.dx,
-                                                            child: Stack(
-                                                              clipBehavior: Clip.none,
-                                                              children: [
-                                                                ValueListenableBuilder(
-                                                                  valueListenable: newWidth,
-                                                                  builder: (_, value, __) {
-                                                                    return Positioned(
-                                                                      left: value,
-                                                                      child: _buildDraggableIndicator(index),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                _buildDraggableIndicator(index),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        }),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
