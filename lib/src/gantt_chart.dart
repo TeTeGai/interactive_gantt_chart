@@ -44,6 +44,10 @@ class GanttChart<T> extends StatefulWidget {
 
   final void Function(GanttData<T> newData, DragEndDetails dragDetails)? onDragEnd;
 
+  /// Set weather the chart should scroll while dragging the draggable indicator on the edge of the screen
+  /// Still buggy
+  final bool scrollWhileDrag;
+
   const GanttChart({
     super.key,
     required this.data,
@@ -66,6 +70,7 @@ class GanttChart<T> extends StatefulWidget {
     this.showLabelOnChartBar = true,
     this.chartBarColor = Colors.blue,
     this.chartBarBorderRadius = const BorderRadius.all(Radius.circular(5)),
+    this.scrollWhileDrag = false,
   });
 
   @override
@@ -188,7 +193,9 @@ class _GanttChartState extends State<GanttChart> {
                 // Draw all gant chart here
                 Container(
                   width: constraints.maxWidth - widget.labelWidth,
-                  height: realChartHeight > constraints.maxHeight - widget.heightPerRow ? constraints.maxHeight - widget.heightPerRow : realChartHeight,
+                  height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+                      ? constraints.maxHeight - widget.heightPerRow
+                      : realChartHeight,
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: widget.gridLineColor),
@@ -303,7 +310,23 @@ class _GanttChartState extends State<GanttChart> {
                                                               widget.onDragEnd!(widget.data[index], details);
                                                             }
                                                           },
-                                                          onHorizontalDragUpdate: (details) => newWidth.value = details.localPosition.dx,
+                                                          onHorizontalDragUpdate: (details) {
+                                                            newWidth.value = details.localPosition.dx;
+
+                                                            if (widget.scrollWhileDrag) {
+                                                              if (details.globalPosition.dx > (constraints.maxWidth) - 50) {
+                                                                chartHorizontalScrollController.jumpTo(
+                                                                  chartHorizontalScrollController.offset + details.delta.dx,
+                                                                );
+                                                                newWidth.value += details.primaryDelta! + widget.widthPerDay - 10;
+                                                              } else if (details.globalPosition.dx < 150) {
+                                                                chartHorizontalScrollController.jumpTo(
+                                                                  chartHorizontalScrollController.offset + details.delta.dx,
+                                                                );
+                                                                newWidth.value += details.primaryDelta! - widget.widthPerDay + 10;
+                                                              }
+                                                            }
+                                                          },
                                                           child: Stack(
                                                             clipBehavior: Clip.none,
                                                             children: [

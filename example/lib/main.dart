@@ -38,6 +38,7 @@ class MyHomePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task>(
+                    scrollWhileDrag: true,
                     data: DummyData.data.map((task) {
                       return GanttData<Task>(
                         dateStart: task.start,
