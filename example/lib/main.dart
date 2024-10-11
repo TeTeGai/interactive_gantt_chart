@@ -23,8 +23,22 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  List<GanttData<Task>> ganttData = DummyData.data.map((task) {
+    return GanttData<Task>(
+      dateStart: task.start,
+      dateEnd: task.end,
+      data: task,
+      label: task.name,
+    );
+  }).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -45,14 +59,10 @@ class MyHomePage extends StatelessWidget {
                         child: Text('data $index'),
                       );
                     },
-                    data: DummyData.data.map((task) {
-                      return GanttData<Task>(
-                        dateStart: task.start,
-                        dateEnd: task.end,
-                        data: task,
-                        label: task.name,
-                      );
-                    }).toList(),
+                    data: ganttData,
+                    onDragEnd: (data, index, _) {
+                      ganttData[index] = data;
+                    },
                   ),
                 ),
               ),
