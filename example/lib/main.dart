@@ -59,6 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: Text('data $index'),
                       );
                     },
+                    onInitScrollToCurrentDate: true,
                     data: ganttData,
                     onDragEnd: (data, index, _) {
                       ganttData[index] = data;

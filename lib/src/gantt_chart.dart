@@ -34,12 +34,16 @@ class GanttChart<T> extends StatefulWidget {
   /// Set how many days to be shown after the last task end date
   final int daysAfterLastTask;
 
+  /// Set how many days to be shown before the first task start date
   final int daysBeforeFirstTask;
 
   final String labelText;
   final bool showLabelOnChartBar;
   final Color chartBarColor;
   final BorderRadiusGeometry chartBarBorderRadius;
+
+  /// Make sure that current date is visible when the widget is first rendered
+  final bool onInitScrollToCurrentDate;
 
   /// Builder for the draggable end date indicator
   final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)?
@@ -88,6 +92,7 @@ class GanttChart<T> extends StatefulWidget {
     this.chartBarBorderRadius = const BorderRadius.all(Radius.circular(5)),
     this.scrollWhileDrag = false,
     this.taskLabelBuilder,
+    this.onInitScrollToCurrentDate = false,
   });
 
   @override
@@ -118,6 +123,21 @@ class _GanttChartState extends State<GanttChart> {
       final visibleDate = firstStartDate.add(Duration(days: offsetInDays));
       dateLabel.value = visibleDate;
     });
+
+    // Scroll to the current date
+    if (widget.onInitScrollToCurrentDate) {
+      Future.delayed(const Duration(seconds: 1), () {
+        final firstStartDate =
+            widget.data.fold(DateTime.now(), (previousValue, element) {
+          return element.dateStart.isBefore(previousValue)
+              ? element.dateStart
+              : previousValue;
+        });
+        final offsetInDays = (DateTime.now().difference(firstStartDate).inDays);
+        chartHorizontalScrollController
+            .jumpTo(offsetInDays * widget.widthPerDay);
+      });
+    }
     super.initState();
   }
 
@@ -167,8 +187,13 @@ class _GanttChartState extends State<GanttChart> {
                 _buildYearMonthLabel(constraints),
 
                 // Draw all gant chart here
-                _buildMainGanttChart(constraints, realChartHeight,
-                    maxChartWidth, dayLabelHeight, firstStartDate),
+                _buildMainGanttChart(
+                  constraints,
+                  realChartHeight,
+                  maxChartWidth,
+                  dayLabelHeight,
+                  firstStartDate,
+                ),
               ],
             ),
           ],
@@ -256,9 +281,14 @@ class _GanttChartState extends State<GanttChart> {
                       for (int i = 0;
                           i < maxChartWidth / widget.widthPerDay;
                           i++)
-                        SizedBox(
+                        Container(
                           width: widget.widthPerDay,
                           height: dayLabelHeight,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: widget.gridLineColor),
+                            ),
+                          ),
                           child: Center(
                             child: Text(
                               firstStartDate
@@ -325,204 +355,12 @@ class _GanttChartState extends State<GanttChart> {
                                         ),
 
                                         // Draggable Start Indicator
-                                        Positioned(
-                                          left: 0,
-                                          child: Builder(builder: (context) {
-                                            final newWidth = ValueNotifier(0.0);
-                                            return GestureDetector(
-                                              onHorizontalDragEnd: (details) {
-                                                final newWidth =
-                                                    details.localPosition.dx;
-                                                late DateTime newStart;
-                                                // check if direction is right or left
-                                                if (details.velocity
-                                                        .pixelsPerSecond.dx <
-                                                    0) {
-                                                  newStart = data.dateStart
-                                                      .subtract(Duration(
-                                                          days: (newWidth /
-                                                                  widget
-                                                                      .widthPerDay)
-                                                              .round()));
-                                                } else {
-                                                  newStart = data.dateStart.add(
-                                                      Duration(
-                                                          days: (newWidth /
-                                                                  widget
-                                                                      .widthPerDay)
-                                                              .round()));
-                                                }
-                                                setState(() {
-                                                  widget.data[index] = widget
-                                                      .data[index]
-                                                      .copyWith(
-                                                          dateStart: newStart);
-                                                });
-                                                if (widget.onDragEnd != null) {
-                                                  widget.onDragEnd!(
-                                                      widget.data[index],
-                                                      index,
-                                                      details);
-                                                }
-                                              },
-                                              onHorizontalDragUpdate:
-                                                  (details) {
-                                                newWidth.value =
-                                                    details.localPosition.dx;
-
-                                                if (widget.scrollWhileDrag) {
-                                                  if (details
-                                                          .globalPosition.dx >
-                                                      (constraints.maxWidth) -
-                                                          50) {
-                                                    chartHorizontalScrollController
-                                                        .jumpTo(
-                                                      chartHorizontalScrollController
-                                                              .offset +
-                                                          details.delta.dx,
-                                                    );
-                                                    newWidth.value +=
-                                                        details.primaryDelta! +
-                                                            widget.widthPerDay -
-                                                            10;
-                                                  } else if (details
-                                                          .globalPosition.dx <
-                                                      150) {
-                                                    chartHorizontalScrollController
-                                                        .jumpTo(
-                                                      chartHorizontalScrollController
-                                                              .offset +
-                                                          details.delta.dx,
-                                                    );
-                                                    newWidth.value +=
-                                                        details.primaryDelta! -
-                                                            widget.widthPerDay +
-                                                            10;
-                                                  }
-                                                }
-                                              },
-                                              child: Stack(
-                                                clipBehavior: Clip.none,
-                                                children: [
-                                                  // Visual indicator for the draggableEnd indicator
-                                                  ValueListenableBuilder(
-                                                    valueListenable: newWidth,
-                                                    builder: (_, value, __) {
-                                                      return Positioned(
-                                                        left: value,
-                                                        child:
-                                                            _buildDraggableStartIndicator(
-                                                                index),
-                                                      );
-                                                    },
-                                                  ),
-                                                  _buildDraggableStartIndicator(
-                                                      index),
-                                                ],
-                                              ),
-                                            );
-                                          }),
-                                        ),
+                                        _buildDraggableStart(
+                                            data, index, constraints),
 
                                         // Draggable End Indicator
-                                        Positioned(
-                                          right: 0,
-                                          child: Builder(builder: (context) {
-                                            final newWidth = ValueNotifier(0.0);
-                                            return GestureDetector(
-                                              onHorizontalDragEnd: (details) {
-                                                final newWidth =
-                                                    details.localPosition.dx;
-                                                late DateTime newEnd;
-                                                // check if direction is right or left
-                                                if (details.velocity
-                                                        .pixelsPerSecond.dx <
-                                                    0) {
-                                                  newEnd = data.dateEnd
-                                                      .subtract(Duration(
-                                                          days: (newWidth /
-                                                                  widget
-                                                                      .widthPerDay)
-                                                              .round()));
-                                                } else {
-                                                  newEnd = data.dateEnd.add(
-                                                      Duration(
-                                                          days: (newWidth /
-                                                                  widget
-                                                                      .widthPerDay)
-                                                              .round()));
-                                                }
-                                                setState(() {
-                                                  widget.data[index] = widget
-                                                      .data[index]
-                                                      .copyWith(
-                                                          dateEnd: newEnd);
-                                                });
-                                                if (widget.onDragEnd != null) {
-                                                  widget.onDragEnd!(
-                                                      widget.data[index],
-                                                      index,
-                                                      details);
-                                                }
-                                              },
-                                              onHorizontalDragUpdate:
-                                                  (details) {
-                                                newWidth.value =
-                                                    details.localPosition.dx;
-
-                                                if (widget.scrollWhileDrag) {
-                                                  if (details
-                                                          .globalPosition.dx >
-                                                      (constraints.maxWidth) -
-                                                          50) {
-                                                    chartHorizontalScrollController
-                                                        .jumpTo(
-                                                      chartHorizontalScrollController
-                                                              .offset +
-                                                          details.delta.dx,
-                                                    );
-                                                    newWidth.value +=
-                                                        details.primaryDelta! +
-                                                            widget.widthPerDay -
-                                                            10;
-                                                  } else if (details
-                                                          .globalPosition.dx <
-                                                      150) {
-                                                    chartHorizontalScrollController
-                                                        .jumpTo(
-                                                      chartHorizontalScrollController
-                                                              .offset +
-                                                          details.delta.dx,
-                                                    );
-                                                    newWidth.value +=
-                                                        details.primaryDelta! -
-                                                            widget.widthPerDay +
-                                                            10;
-                                                  }
-                                                }
-                                              },
-                                              child: Stack(
-                                                clipBehavior: Clip.none,
-                                                children: [
-                                                  // Visual indicator for the draggableEnd indicator
-                                                  ValueListenableBuilder(
-                                                    valueListenable: newWidth,
-                                                    builder: (_, value, __) {
-                                                      return Positioned(
-                                                        left: value,
-                                                        child:
-                                                            _buildDraggableEndIndicator(
-                                                                index),
-                                                      );
-                                                    },
-                                                  ),
-                                                  _buildDraggableEndIndicator(
-                                                      index),
-                                                ],
-                                              ),
-                                            );
-                                          }),
-                                        ),
+                                        _buildDraggableEnd(
+                                            data, index, constraints),
                                       ],
                                     ),
                                   ),
@@ -540,6 +378,137 @@ class _GanttChartState extends State<GanttChart> {
           ],
         ),
       ),
+    );
+  }
+
+  Positioned _buildDraggableEnd(
+      GanttData<dynamic> data, int index, BoxConstraints constraints) {
+    return Positioned(
+      right: 0,
+      child: Builder(builder: (context) {
+        final newWidth = ValueNotifier(0.0);
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            final newWidth = details.localPosition.dx;
+            late DateTime newEnd;
+            // check if direction is right or left
+            if (details.velocity.pixelsPerSecond.dx < 0) {
+              newEnd = data.dateEnd.subtract(
+                  Duration(days: (newWidth / widget.widthPerDay).round()));
+            } else {
+              newEnd = data.dateEnd
+                  .add(Duration(days: (newWidth / widget.widthPerDay).round()));
+            }
+            setState(() {
+              widget.data[index] = widget.data[index].copyWith(dateEnd: newEnd);
+            });
+            if (widget.onDragEnd != null) {
+              widget.onDragEnd!(widget.data[index], index, details);
+            }
+          },
+          onHorizontalDragUpdate: (details) {
+            newWidth.value = details.localPosition.dx;
+
+            if (widget.scrollWhileDrag) {
+              if (details.globalPosition.dx > (constraints.maxWidth) - 50) {
+                chartHorizontalScrollController.jumpTo(
+                  chartHorizontalScrollController.offset + details.delta.dx,
+                );
+                newWidth.value +=
+                    details.primaryDelta! + widget.widthPerDay - 10;
+              } else if (details.globalPosition.dx < 150) {
+                chartHorizontalScrollController.jumpTo(
+                  chartHorizontalScrollController.offset + details.delta.dx,
+                );
+                newWidth.value +=
+                    details.primaryDelta! - widget.widthPerDay + 10;
+              }
+            }
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Visual indicator for the draggableEnd indicator
+              ValueListenableBuilder(
+                valueListenable: newWidth,
+                builder: (_, value, __) {
+                  return Positioned(
+                    left: value,
+                    child: _buildDraggableEndIndicator(index),
+                  );
+                },
+              ),
+              _buildDraggableEndIndicator(index),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Positioned _buildDraggableStart(
+      GanttData<dynamic> data, int index, BoxConstraints constraints) {
+    return Positioned(
+      left: 0,
+      child: Builder(builder: (context) {
+        final newWidth = ValueNotifier(0.0);
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            final newWidth = details.localPosition.dx;
+            late DateTime newStart;
+            // check if direction is right or left
+            if (details.velocity.pixelsPerSecond.dx < 0) {
+              newStart = data.dateStart.subtract(
+                  Duration(days: (newWidth / widget.widthPerDay).round()));
+            } else {
+              newStart = data.dateStart
+                  .add(Duration(days: (newWidth / widget.widthPerDay).round()));
+            }
+            setState(() {
+              widget.data[index] =
+                  widget.data[index].copyWith(dateStart: newStart);
+            });
+            if (widget.onDragEnd != null) {
+              widget.onDragEnd!(widget.data[index], index, details);
+            }
+          },
+          onHorizontalDragUpdate: (details) {
+            newWidth.value = details.localPosition.dx;
+
+            if (widget.scrollWhileDrag) {
+              if (details.globalPosition.dx > (constraints.maxWidth) - 50) {
+                chartHorizontalScrollController.jumpTo(
+                  chartHorizontalScrollController.offset + details.delta.dx,
+                );
+                newWidth.value +=
+                    details.primaryDelta! + widget.widthPerDay - 10;
+              } else if (details.globalPosition.dx < 150) {
+                chartHorizontalScrollController.jumpTo(
+                  chartHorizontalScrollController.offset + details.delta.dx,
+                );
+                newWidth.value +=
+                    details.primaryDelta! - widget.widthPerDay + 10;
+              }
+            }
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Visual indicator for the draggableEnd indicator
+              ValueListenableBuilder(
+                valueListenable: newWidth,
+                builder: (_, value, __) {
+                  return Positioned(
+                    left: value,
+                    child: _buildDraggableStartIndicator(index),
+                  );
+                },
+              ),
+              _buildDraggableStartIndicator(index),
+            ],
+          ),
+        );
+      }),
     );
   }
 

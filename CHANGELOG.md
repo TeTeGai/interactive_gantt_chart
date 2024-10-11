@@ -10,3 +10,8 @@
 ## 0.0.3
 
 * Add optional custom builder for task labels
+
+## 0.0.4
+
+* Add date end start resizable
+* Add optional scroll to current date on init
