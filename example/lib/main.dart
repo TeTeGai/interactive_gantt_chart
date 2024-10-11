@@ -39,6 +39,12 @@ class MyHomePage extends StatelessWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task>(
                     scrollWhileDrag: true,
+                    taskLabelBuilder: (data, index) {
+                      return Container(
+                        alignment: Alignment.center,
+                        child: Text('data $index'),
+                      );
+                    },
                     data: DummyData.data.map((task) {
                       return GanttData<Task>(
                         dateStart: task.start,
