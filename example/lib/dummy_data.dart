@@ -6,8 +6,17 @@ class DummyData {
       if (index % 2 == 0 && index != 0) {
         counter++;
       }
+
+      if (index == 0) {
+        return Task(
+          name: 'Test Short',
+          start: DateTime.now(),
+          end: DateTime.now().add(const Duration(days: 3)),
+        );
+      }
+
       return Task(
-        name: 'Task Task task $index',
+        name: 'Task $index',
         start: DateTime(2024, 10, 1).add(Duration(days: counter)),
         end: DateTime.now().add(Duration(days: counter + 10)),
       );
