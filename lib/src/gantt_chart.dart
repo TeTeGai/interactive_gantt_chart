@@ -49,15 +49,18 @@ class GanttChart<T> extends StatefulWidget {
   final bool onInitScrollToCurrentDate;
 
   /// Builder for the draggable end date indicator
-  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)? draggableEndIndicatorBuilder;
+  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)?
+      draggableEndIndicatorBuilder;
 
   /// Builder for the draggable start date indicator
-  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)? draggableStartIndicatorBuilder;
+  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)?
+      draggableStartIndicatorBuilder;
 
   /// Builder for the task label
   final Widget Function(String textLabel, int index)? taskLabelBuilder;
 
-  final void Function(GanttData<T> newData, int index, DragEndDetails dragDetails)? onDragEnd;
+  final void Function(
+      GanttData<T> newData, int index, DragEndDetails dragDetails)? onDragEnd;
 
   /// Set weather the chart should scroll while dragging the draggable indicator on the edge of the screen
   /// Still buggy
@@ -99,10 +102,10 @@ class GanttChart<T> extends StatefulWidget {
   });
 
   @override
-  State<GanttChart> createState() => _GanttChartState();
+  State<GanttChart> createState() => _GanttChartState<T>();
 }
 
-class _GanttChartState extends State<GanttChart> {
+class _GanttChartState<T> extends State<GanttChart<T>> {
   final linkedScrollController = LinkedScrollControllerGroup();
   late ScrollController labelScrollController;
   late ScrollController chartScrollController;
@@ -120,12 +123,15 @@ class _GanttChartState extends State<GanttChart> {
       final firstStartDate = widget.data.fold(
         DateTime.now(),
         (previousValue, element) {
-          return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+          return element.dateStart.isBefore(previousValue)
+              ? element.dateStart
+              : previousValue;
         },
       ).subtract(
         Duration(days: widget.daysBeforeFirstTask),
       );
-      final offsetInDays = (chartHorizontalScrollController.offset / widthPerDay).round();
+      final offsetInDays =
+          (chartHorizontalScrollController.offset / widthPerDay).round();
       final visibleDate = firstStartDate.add(Duration(days: offsetInDays));
       dateLabel.value = visibleDate;
     });
@@ -136,7 +142,9 @@ class _GanttChartState extends State<GanttChart> {
         final firstStartDate = widget.data.fold(
           DateTime.now(),
           (previousValue, element) {
-            return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+            return element.dateStart.isBefore(previousValue)
+                ? element.dateStart
+                : previousValue;
           },
         );
         final offsetInDays = (DateTime.now().difference(firstStartDate).inDays);
@@ -156,18 +164,26 @@ class _GanttChartState extends State<GanttChart> {
 
   @override
   Widget build(BuildContext context) {
-    final firstStartDate = widget.data.fold(DateTime.now(), (previousValue, element) {
-      return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+    final firstStartDate =
+        widget.data.fold(DateTime.now(), (previousValue, element) {
+      return element.dateStart.isBefore(previousValue)
+          ? element.dateStart
+          : previousValue;
     }).subtract(
       Duration(days: widget.daysBeforeFirstTask),
     );
-    final firstEndDate = widget.data.fold(DateTime.now(), (previousValue, element) {
-      return element.dateEnd.isAfter(previousValue) ? element.dateEnd : previousValue;
+    final firstEndDate =
+        widget.data.fold(DateTime.now(), (previousValue, element) {
+      return element.dateEnd.isAfter(previousValue)
+          ? element.dateEnd
+          : previousValue;
     }).add(Duration(days: widget.daysAfterLastTask));
-    final maxChartWidth = (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
+    final maxChartWidth =
+        (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
 
     final dayLabelHeight = widget.heightPerRow * 0.5;
-    final realChartHeight = widget.data.length * widget.heightPerRow + dayLabelHeight;
+    final realChartHeight =
+        widget.data.length * widget.heightPerRow + dayLabelHeight;
 
     return LayoutBuilder(builder: (context, constraints) {
       return GestureDetector(
@@ -298,7 +314,10 @@ class _GanttChartState extends State<GanttChart> {
                           ),
                           child: Center(
                             child: Text(
-                              firstStartDate.add(Duration(days: i)).day.toString(),
+                              firstStartDate
+                                  .add(Duration(days: i))
+                                  .day
+                                  .toString(),
                               style: widget.dayLabelStyle,
                             ),
                           ),
@@ -311,9 +330,12 @@ class _GanttChartState extends State<GanttChart> {
                       itemCount: widget.data.length,
                       itemBuilder: (context, index) {
                         final data = widget.data[index];
-                        final duration = data.dateEnd.difference(data.dateStart);
+                        final duration =
+                            data.dateEnd.difference(data.dateStart);
                         final width = duration.inDays * widthPerDay;
-                        final start = data.dateStart.difference(firstStartDate).inDays * widthPerDay;
+                        final start =
+                            data.dateStart.difference(firstStartDate).inDays *
+                                widthPerDay;
 
                         return Stack(
                           children: [
@@ -342,25 +364,30 @@ class _GanttChartState extends State<GanttChart> {
                                     builder: (context, selectedIndex, _) {
                                       final isSelected = selectedIndex == index;
                                       return GestureDetector(
-                                        onTap: () => selectedTaskIndex.value = index,
+                                        onTap: () =>
+                                            selectedTaskIndex.value = index,
                                         onHorizontalDragEnd: !isSelected
                                             ? null
                                             : (details) {
-                                                if (widget.onDragEnd != null) {
-                                                  widget.onDragEnd!(
-                                                    widget.data[index],
-                                                    index,
-                                                    details,
-                                                  );
-                                                }
+                                                widget.onDragEnd?.call(
+                                                  widget.data[index],
+                                                  index,
+                                                  details,
+                                                );
                                               },
                                         onHorizontalDragUpdate: !isSelected
                                             ? null
                                             : (details) {
                                                 // move entire bar
-                                                final delta = details.delta.dx / 2; //slow down the drag
-                                                final deltaDays = ((delta / widget.widthPerDay) * 24).round();
-                                                final newStart = data.dateStart.add(
+                                                final delta = details.delta.dx /
+                                                    2; //slow down the drag
+                                                final deltaDays = ((delta /
+                                                            widget
+                                                                .widthPerDay) *
+                                                        24)
+                                                    .round();
+                                                final newStart =
+                                                    data.dateStart.add(
                                                   Duration(days: deltaDays),
                                                 );
                                                 final newEnd = data.dateEnd.add(
@@ -368,7 +395,9 @@ class _GanttChartState extends State<GanttChart> {
                                                 );
                                                 setState(
                                                   () {
-                                                    widget.data[index] = widget.data[index].copyWith(
+                                                    widget.data[index] = widget
+                                                        .data[index]
+                                                        .copyWith(
                                                       dateStart: newStart,
                                                       dateEnd: newEnd,
                                                     );
@@ -382,13 +411,19 @@ class _GanttChartState extends State<GanttChart> {
                                               },
                                         child: Container(
                                           width: width,
-                                          height: widget.heightPerRow - widget.rowSpacing,
+                                          height: widget.heightPerRow -
+                                              widget.rowSpacing,
                                           decoration: BoxDecoration(
                                             color: widget.chartBarColor,
-                                            borderRadius: widget.chartBarBorderRadius,
+                                            borderRadius:
+                                                widget.chartBarBorderRadius,
                                             border: Border.all(
-                                              color: isSelected ? widget.activeBorderColor : Colors.transparent,
-                                              width: isSelected ? widget.activeBorderWidth : 0,
+                                              color: isSelected
+                                                  ? widget.activeBorderColor
+                                                  : Colors.transparent,
+                                              width: isSelected
+                                                  ? widget.activeBorderWidth
+                                                  : 0,
                                             ),
                                           ),
                                           child: Stack(
@@ -396,7 +431,8 @@ class _GanttChartState extends State<GanttChart> {
                                             alignment: Alignment.center,
                                             children: [
                                               Visibility(
-                                                visible: widget.showLabelOnChartBar,
+                                                visible:
+                                                    widget.showLabelOnChartBar,
                                                 child: Center(
                                                   child: Text(data.label),
                                                 ),
@@ -467,11 +503,14 @@ class _GanttChartState extends State<GanttChart> {
                     );
                   }
                   setState(() {
-                    widget.data[index] = widget.data[index].copyWith(dateEnd: newEnd);
+                    widget.data[index] =
+                        widget.data[index].copyWith(dateEnd: newEnd);
                   });
-                  if (widget.onDragEnd != null) {
-                    widget.onDragEnd!(widget.data[index], index, details);
-                  }
+                  widget.onDragEnd?.call(
+                    widget.data[index],
+                    index,
+                    details,
+                  );
                 },
           onHorizontalDragUpdate: !isSelected
               ? null
@@ -479,16 +518,21 @@ class _GanttChartState extends State<GanttChart> {
                   newWidth.value = details.localPosition.dx;
 
                   if (widget.scrollWhileDrag) {
-                    if (details.globalPosition.dx > (constraints.maxWidth) - 50) {
+                    if (details.globalPosition.dx >
+                        (constraints.maxWidth) - 50) {
                       chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset + details.delta.dx,
+                        chartHorizontalScrollController.offset +
+                            details.delta.dx,
                       );
-                      newWidth.value += details.primaryDelta! + widthPerDay - 10;
+                      newWidth.value +=
+                          details.primaryDelta! + widthPerDay - 10;
                     } else if (details.globalPosition.dx < 150) {
                       chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset + details.delta.dx,
+                        chartHorizontalScrollController.offset +
+                            details.delta.dx,
                       );
-                      newWidth.value += details.primaryDelta! - widthPerDay + 10;
+                      newWidth.value +=
+                          details.primaryDelta! - widthPerDay + 10;
                     }
                   }
                 },
@@ -543,11 +587,14 @@ class _GanttChartState extends State<GanttChart> {
                     );
                   }
                   setState(() {
-                    widget.data[index] = widget.data[index].copyWith(dateStart: newStart);
+                    widget.data[index] =
+                        widget.data[index].copyWith(dateStart: newStart);
                   });
-                  if (widget.onDragEnd != null) {
-                    widget.onDragEnd!(widget.data[index], index, details);
-                  }
+                  widget.onDragEnd?.call(
+                    widget.data[index],
+                    index,
+                    details,
+                  );
                 },
           onHorizontalDragUpdate: !isSelected
               ? null
@@ -555,16 +602,21 @@ class _GanttChartState extends State<GanttChart> {
                   newWidth.value = details.localPosition.dx;
 
                   if (widget.scrollWhileDrag) {
-                    if (details.globalPosition.dx > (constraints.maxWidth) - 50) {
+                    if (details.globalPosition.dx >
+                        (constraints.maxWidth) - 50) {
                       chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset + details.delta.dx,
+                        chartHorizontalScrollController.offset +
+                            details.delta.dx,
                       );
-                      newWidth.value += details.primaryDelta! + widthPerDay - 10;
+                      newWidth.value +=
+                          details.primaryDelta! + widthPerDay - 10;
                     } else if (details.globalPosition.dx < 150) {
                       chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset + details.delta.dx,
+                        chartHorizontalScrollController.offset +
+                            details.delta.dx,
                       );
-                      newWidth.value += details.primaryDelta! - widthPerDay + 10;
+                      newWidth.value +=
+                          details.primaryDelta! - widthPerDay + 10;
                     }
                   }
                 },
@@ -624,7 +676,8 @@ class _GanttChartState extends State<GanttChart> {
 
   Widget _buildDraggableStartIndicator(int index) {
     if (widget.draggableEndIndicatorBuilder != null) {
-      return widget.draggableEndIndicatorBuilder!(widget.heightPerRow, widget.rowSpacing, widget.data[index]);
+      return widget.draggableEndIndicatorBuilder!(
+          widget.heightPerRow, widget.rowSpacing, widget.data[index]);
     }
 
     return Container(
