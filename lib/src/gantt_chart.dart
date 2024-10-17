@@ -84,7 +84,7 @@ class GanttChart<T> extends StatefulWidget {
       fontSize: 12,
     ),
     this.daysAfterLastTask = 10,
-    this.daysBeforeFirstTask = 3,
+    this.daysBeforeFirstTask = 5,
     this.draggableEndIndicatorBuilder,
     this.draggableStartIndicatorBuilder,
     this.onDragEnd,
@@ -355,6 +355,18 @@ class _GanttChartState extends State<GanttChart> {
                                         return GestureDetector(
                                           onTap: () =>
                                               selectedTaskIndex.value = index,
+                                          onHorizontalDragEnd: !isSelected
+                                              ? null
+                                              : (details) {
+                                                  if (widget.onDragEnd !=
+                                                      null) {
+                                                    widget.onDragEnd!(
+                                                      widget.data[index],
+                                                      index,
+                                                      details,
+                                                    );
+                                                  }
+                                                },
                                           onHorizontalDragUpdate: !isSelected
                                               ? null
                                               : (details) {
@@ -384,6 +396,9 @@ class _GanttChartState extends State<GanttChart> {
 
                                                   // scroll while dragging
                                                   if (widget.scrollWhileDrag) {
+                                                    // chartHorizontalScrollController.jumpTo(
+                                                    //   chartHorizontalScrollController.offset + details.delta.dx,
+                                                    // );
                                                     // TODO: Implement scroll while dragging
                                                   }
                                                 },
