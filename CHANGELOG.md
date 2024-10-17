@@ -15,3 +15,9 @@
 
 * Add date end start resizable
 * Add optional scroll to current date on init
+
+## 0.0.5
+
+* Add pitch to scale the chart parameter
+* Fix onDragEnd not called
+* Temporary disable scroll when dragging entire task
