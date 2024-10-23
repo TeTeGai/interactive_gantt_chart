@@ -280,6 +280,104 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
     double dayLabelHeight,
     DateTime firstStartDate,
   ) {
+    List<Widget> labelWidgets = [];
+    List<Positioned> verticalGuideLines = []; // additional vertical lines for week or month
+
+    DateFormat weekFormat = DateFormat('EEEE');
+
+    // Loop through and generate labels
+    for (int i = 0; i < maxChartWidth / widthPerDay;) {
+      DateTime currentDate = firstStartDate.add(Duration(days: i));
+
+      // Check if the current date is the start of the week
+      // Assuming the first day of the week is Monday (adjust to 'Sunday' if needed)
+      bool isStartOfWeek = weekFormat.format(currentDate) == 'Monday' || i == 0;
+      bool isStartOfMonth = currentDate.day == 1 || i == 0;
+
+      // Calculate the remaining days in the week
+      late int daysLeftInWeek;
+      late int daysLeftInMonth;
+
+      if (ganttMode == GanttMode.weekly) {
+        daysLeftInWeek = 8 - currentDate.weekday;
+      } else if (ganttMode == GanttMode.monthly) {
+        daysLeftInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day - currentDate.day + 1;
+      }
+
+      // Ensure it doesn't go beyond the chart width
+      int daysToShow = ganttMode == GanttMode.weekly
+          ? (i + daysLeftInWeek > maxChartWidth / widthPerDay) // If last week has fewer days
+          ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
+          : daysLeftInWeek
+          : ganttMode == GanttMode.monthly
+          ? (i + daysLeftInMonth > maxChartWidth / widthPerDay) // If last month has fewer days
+          ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
+          : daysLeftInMonth
+          : 1;
+
+      // Avoid showing 0 days
+      if (daysToShow == 0) {
+        i++;
+        continue;
+      }
+
+      // Generate labels based on the mode
+      String labelText = '';
+      double labelWidth = 0;
+
+      if (ganttMode == GanttMode.daily) {
+        labelText = currentDate.day.toString();
+        labelWidth = widthPerDay;
+      } else if (ganttMode == GanttMode.weekly && isStartOfWeek) {
+        // Show week label (e.g., 'Week of 1st Jan') and calculate the dynamic width
+        labelText = 'Week of ${currentDate.day} ${DateFormat('MMM').format(currentDate)}';
+        labelWidth = widthPerDay * daysToShow; // Dynamically calculate the label width
+      } else if (ganttMode == GanttMode.monthly && isStartOfMonth) {
+        // Show month label (e.g., 'Jan 2022') and calculate the dynamic width
+        labelText = '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
+        labelWidth = widthPerDay * daysToShow; // Dynamically calculate the label width
+      }
+
+      // Add the label widget to the list
+      labelWidgets.add(
+        Container(
+          width: labelWidth,
+          height: dayLabelHeight,
+          decoration: BoxDecoration(
+            color: widget.chartBarColor,
+            border: Border(
+              right: (ganttMode != GanttMode.daily) ? BorderSide(color: widget.tableOuterColor) : BorderSide.none,
+              left: BorderSide(color: widget.tableOuterColor),
+              bottom: BorderSide(color: widget.tableOuterColor),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              labelText,
+              style: widget.dayLabelStyle,
+            ),
+          ),
+        ),
+      );
+
+      if (ganttMode != GanttMode.daily) {
+        // Add vertical line for each week or month
+        verticalGuideLines.add(
+          Positioned(
+            left: i * widthPerDay - 1,
+            child: Container(
+              height: realChartHeight,
+              width: 2,
+              color: widget.tableOuterColor,
+            ),
+          ),
+        );
+      }
+
+      // Move to the next day or week or month
+      i += (ganttMode == GanttMode.daily) ? 1 : daysToShow;
+    }
+
     return Container(
       width: constraints.maxWidth - widget.labelWidth,
       height: realChartHeight > constraints.maxHeight - widget.heightPerRow
@@ -300,101 +398,20 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                 child: Container(
                   height: (realChartHeight),
                   width: 1,
-                  color: widget.gridLineColor,
+                  color: (ganttMode == GanttMode.daily) ? widget.gridLineColor : widget.gridLineColor.withOpacity(0.5),
                 ),
               ),
+
+            // Additional vertical line for each week or month
+            ...verticalGuideLines,
 
             SizedBox(
               width: maxChartWidth,
               child: Column(
                 children: [
-                  Builder(builder: (context) {
-                    // Create a list to store the generated label widgets
-                    List<Widget> labelWidgets = [];
-
-                    DateFormat weekFormat = DateFormat('EEEE');
-
-                    // Loop through and generate labels
-                    for (int i = 0; i < maxChartWidth / widthPerDay;) {
-                      DateTime currentDate = firstStartDate.add(Duration(days: i));
-
-                      // Check if the current date is the start of the week
-                      // Assuming the first day of the week is Monday (adjust to 'Sunday' if needed)
-                      bool isStartOfWeek = weekFormat.format(currentDate) == 'Monday' || i == 0;
-                      bool isStartOfMonth = currentDate.day == 1 || i == 0;
-
-                      // Calculate the remaining days in the week
-                      int daysLeftInWeek = 8 - currentDate.weekday;
-                      int daysLeftInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day - currentDate.day;
-
-                      // Ensure it doesn't go beyond the chart width
-                      int daysToShow = ganttMode == GanttMode.weekly
-                          ? (i + daysLeftInWeek > maxChartWidth / widthPerDay) // If last week has fewer days
-                              ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
-                              : daysLeftInWeek
-                          : ganttMode == GanttMode.monthly
-                              ? (i + daysLeftInMonth > maxChartWidth / widthPerDay) // If last month has fewer days
-                                  ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
-                                  : daysLeftInMonth
-                              : 1;
-
-                      if (daysToShow == 0) {
-                        i++;
-                        continue;
-                      }
-
-                      // Generate labels based on the mode
-                      String labelText = '';
-                      double labelWidth = 0;
-
-                      if (ganttMode == GanttMode.daily) {
-                        labelText = currentDate.day.toString();
-                        labelWidth = widthPerDay;
-                      } else if (ganttMode == GanttMode.weekly && isStartOfWeek) {
-                        // Show week label (e.g., 'Week of 1st Jan') and calculate the dynamic width
-                        labelText = 'Week of ${currentDate.day} ${DateFormat('MMM').format(currentDate)}';
-                        labelWidth = widthPerDay * daysToShow; // Dynamically calculate the label width
-                      } else if (ganttMode == GanttMode.monthly && isStartOfMonth) {
-                        // Show month label (e.g., 'Jan 2022') and calculate the dynamic width
-                        labelText = '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
-                        labelWidth = widthPerDay * daysToShow; // Dynamically calculate the label width
-                        if (currentDate.day == 1) labelWidth += widthPerDay;
-                      }
-
-                      // Add the label widget to the list
-                      labelWidgets.add(
-                        Container(
-                          width: labelWidth,
-                          height: dayLabelHeight,
-                          decoration: BoxDecoration(
-                            color: widget.chartBarColor,
-                            border: Border(
-                              right: (ganttMode != GanttMode.daily) ? BorderSide(color: widget.tableOuterColor) : BorderSide.none,
-                              left: BorderSide(color: widget.tableOuterColor),
-                              bottom: BorderSide(color: widget.tableOuterColor),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              labelText,
-                              style: widget.dayLabelStyle,
-                            ),
-                          ),
-                        ),
-                      );
-
-                      // Move to the next day or week or month
-                      i += switch (ganttMode) {
-                        GanttMode.daily => 1,
-                        GanttMode.weekly => daysToShow,
-                        GanttMode.monthly => daysToShow + 1,
-                      };
-                    }
-
-                    return Row(
-                      children: labelWidgets,
-                    );
-                  }),
+                  Row(
+                    children: labelWidgets,
+                  ),
                   Expanded(
                     child: ListView.builder(
                       controller: chartScrollController,
@@ -414,7 +431,7 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                                 child: Container(
                                   height: 1,
                                   width: maxChartWidth,
-                                  color: widget.gridLineColor,
+                                  color: (ganttMode == GanttMode.daily) ? widget.gridLineColor : widget.gridLineColor.withOpacity(0.5),
                                 ),
                               ),
 
