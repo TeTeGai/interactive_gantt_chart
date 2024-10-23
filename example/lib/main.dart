@@ -53,6 +53,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task>(
                     scrollWhileDrag: true,
+                    dayLabelStyle: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
                     taskLabelBuilder: (data, index) {
                       return Container(
                         alignment: Alignment.center,

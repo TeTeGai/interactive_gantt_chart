@@ -21,3 +21,8 @@
 * Add pitch to scale the chart parameter
 * Fix onDragEnd not called
 * Temporary disable scroll when dragging entire task
+
+## 0.0.6
+
+* Remove pitch to scale the chart parameter
+* Add GanttMode for showing the gantt chart in daily, weekly or monthly mode
