@@ -1,6 +1,6 @@
 name: interactive_gantt_chart
 description: "A Flutter package to create interactive resizable Gantt charts."
-version: 0.0.5
+version: 0.0.6
 repository: https://github.com/riVFerd/interactive_gantt_chart
 
 environment:
