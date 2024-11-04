@@ -37,8 +37,35 @@ class _MyHomePageState extends State<MyHomePage> {
       dateEnd: task.end,
       data: task,
       label: task.name,
+      subData: [
+        GanttSubData<Task>(
+          dateStart: task.start.add(const Duration(days: 1)),
+          dateEnd: task.end,
+          data: task,
+          label: 'Sub ${task.name}',
+        ),
+        GanttSubData<Task>(
+          dateStart: task.start.add(const Duration(days: 1)),
+          dateEnd: task.end,
+          data: task,
+          label: 'Sub ${task.name}',
+        ),
+      ],
     );
   }).toList();
+
+  @override
+  void initState() {
+    ganttData[0].subData.add(
+      GanttSubData<Task>(
+        dateStart: ganttData[0].data.start,
+        dateEnd: ganttData[0].data.end,
+        data: ganttData[0].data,
+        label: ganttData[0].data.name,
+      ),
+    );
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

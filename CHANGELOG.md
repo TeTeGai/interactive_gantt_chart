@@ -26,3 +26,8 @@
 
 * Remove pitch to scale the chart parameter
 * Add GanttMode for showing the gantt chart in daily, weekly or monthly mode
+
+## 0.0.7
+
+* Some code optimization
+* Add support for subtasks
