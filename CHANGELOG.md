@@ -29,5 +29,6 @@
 
 ## 0.0.7
 
-* Some code optimization
+* Add option to custom each width per day on each GanttMode
+* Show tooltip on date label when on Weekly or Monthly mode
 * Add support for subtasks

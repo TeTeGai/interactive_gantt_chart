@@ -8,8 +8,13 @@ class GanttChart<T> extends StatefulWidget {
   /// List of data to be rendered in the Gantt chart
   final List<GanttData<T>> data;
 
+  /// Initial mode of the Gantt chart
+  final GanttMode ganttMode;
+
   /// Width of each day in the chart
-  final double widthPerDay;
+  final double widthPerDayDaily;
+  final double widthPerDayWeekly;
+  final double widthPerDayMonthly;
 
   /// Height of each row in the chart
   final double heightPerRow;
@@ -45,6 +50,7 @@ class GanttChart<T> extends StatefulWidget {
   final BorderRadiusGeometry chartBarBorderRadius;
   final Color activeBorderColor;
   final double activeBorderWidth;
+  final Color tableOuterColor;
 
   /// Make sure that current date is visible when the widget is first rendered
   final bool onInitScrollToCurrentDate;
@@ -64,13 +70,14 @@ class GanttChart<T> extends StatefulWidget {
   /// Still buggy
   final bool scrollWhileDrag;
 
-  final Color tableOuterColor;
-
   const GanttChart({
     super.key,
     required this.data,
+    this.ganttMode = GanttMode.daily,
     this.tableOuterColor = Colors.black,
-    this.widthPerDay = 50.0,
+    this.widthPerDayDaily = 50.0,
+    this.widthPerDayWeekly = 25.0,
+    this.widthPerDayMonthly = 5.0,
     this.heightPerRow = 50.0,
     this.labelWidth = 100.0,
     this.rowSpacing = 15.0,
@@ -110,11 +117,14 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
   final chartHorizontalScrollController = ScrollController();
   final dateLabel = ValueNotifier(DateTime.now());
   final selectedTaskIndex = ValueNotifier<int>(0);
-  double widthPerDay = 50.0;
-  GanttMode ganttMode = GanttMode.daily;
+  late double widthPerDay;
+  late GanttMode ganttMode;
 
   @override
   void initState() {
+    // init width per day value
+    changeGanttMode(widget.ganttMode);
+
     labelScrollController = linkedScrollController.addAndGet();
     chartScrollController = linkedScrollController.addAndGet();
 
@@ -150,9 +160,9 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
 
   void changeGanttMode(GanttMode newGanttMode) {
     widthPerDay = switch (newGanttMode) {
-      GanttMode.daily => 50.0,
-      GanttMode.weekly => 25.0,
-      GanttMode.monthly => 5.0,
+      GanttMode.daily => widget.widthPerDayDaily,
+      GanttMode.weekly => widget.widthPerDayWeekly,
+      GanttMode.monthly => widget.widthPerDayMonthly,
     };
     setState(() => ganttMode = newGanttMode);
   }
@@ -362,23 +372,31 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
         labelWidth = widthPerDay * daysToShow; // Dynamically calculate the label width
       }
 
+      final tooltipMessage = switch(ganttMode) {
+        GanttMode.weekly => '${DateFormat('dd MMM yyyy').format(currentDate)} - ${DateFormat('dd MMM yyyy').format(currentDate.add(Duration(days: daysToShow - 1)))}',
+        GanttMode.monthly => DateFormat('MMMM yyyy').format(currentDate),
+        _ => null,
+      };
       // Add the label widget to the list
       labelWidgets.add(
-        Container(
-          width: labelWidth,
-          height: dayLabelHeight,
-          decoration: BoxDecoration(
-            color: widget.chartBarColor,
-            border: Border(
-              right: (ganttMode != GanttMode.daily) ? BorderSide(color: widget.tableOuterColor) : BorderSide.none,
-              left: BorderSide(color: widget.tableOuterColor),
-              bottom: BorderSide(color: widget.tableOuterColor),
+        Tooltip(
+          message: tooltipMessage,
+          child: Container(
+            width: labelWidth,
+            height: dayLabelHeight,
+            decoration: BoxDecoration(
+              color: widget.chartBarColor,
+              border: Border(
+                right: (ganttMode != GanttMode.daily) ? BorderSide(color: widget.tableOuterColor) : BorderSide.none,
+                left: BorderSide(color: widget.tableOuterColor),
+                bottom: BorderSide(color: widget.tableOuterColor),
+              ),
             ),
-          ),
-          child: Center(
-            child: Text(
-              labelText,
-              style: widget.dayLabelStyle,
+            child: Center(
+              child: Text(
+                labelText,
+                style: widget.dayLabelStyle,
+              ),
             ),
           ),
         ),
@@ -489,8 +507,8 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                                             ? null
                                             : (details) {
                                                 // move entire bar
-                                                final delta = details.delta.dx / 2; //slow down the drag
-                                                final deltaDays = ((delta / widget.widthPerDay) * 24).round();
+                                                final delta = details.delta.dx / 4; //slow down the drag
+                                                final deltaDays = ((delta / widthPerDay) * 24).round();
                                                 final newStart = data.dateStart.add(
                                                   Duration(days: deltaDays),
                                                 );
@@ -512,8 +530,9 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                                                 }
                                               },
                                         child: Tooltip(
+                                          textAlign: TextAlign.center,
                                           message:
-                                              '${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
+                                              '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
                                           child: Container(
                                             width: width,
                                             height: widget.heightPerRow - widget.rowSpacing,
@@ -601,7 +620,7 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                                                   : (details) {
                                                       // move entire bar
                                                       final delta = details.delta.dx / 2; //slow down the drag
-                                                      final deltaDays = ((delta / widget.widthPerDay) * 24).round();
+                                                      final deltaDays = ((delta / widthPerDay) * 24).round();
                                                       final newStart = subData.dateStart.add(
                                                         Duration(days: deltaDays),
                                                       );
@@ -623,8 +642,9 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
                                                       }
                                                     },
                                               child: Tooltip(
+                                                textAlign: TextAlign.center,
                                                 message:
-                                                    '${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
+                                                    '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
                                                 child: Container(
                                                   width: width,
                                                   height: widget.heightPerRow - widget.rowSpacing,
