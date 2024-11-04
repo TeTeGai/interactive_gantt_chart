@@ -50,7 +50,7 @@ class GanttSubData<T> {
     required this.label,
   });
 
-  GanttSubData<T> copyWith({
+  GanttSubData<T> copyWith<T>({
     DateTime? dateStart,
     DateTime? dateEnd,
     T? data,
@@ -59,7 +59,7 @@ class GanttSubData<T> {
     return GanttSubData<T>(
       dateStart: dateStart ?? this.dateStart,
       dateEnd: dateEnd ?? this.dateEnd,
-      data: data ?? this.data,
+      data: data ?? this.data as T,
       label: label ?? this.label,
     );
   }

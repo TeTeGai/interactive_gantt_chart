@@ -57,13 +57,13 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     ganttData[0].subData.add(
-      GanttSubData<Task>(
-        dateStart: ganttData[0].data.start,
-        dateEnd: ganttData[0].data.end,
-        data: ganttData[0].data,
-        label: ganttData[0].data.name,
-      ),
-    );
+          GanttSubData<Task>(
+            dateStart: ganttData[0].data.start,
+            dateEnd: ganttData[0].data.end,
+            data: ganttData[0].data,
+            label: ganttData[0].data.name,
+          ),
+        );
     super.initState();
   }
 

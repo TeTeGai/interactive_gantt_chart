@@ -32,3 +32,7 @@
 * Add option to custom each width per day on each GanttMode
 * Show tooltip on date label when on Weekly or Monthly mode
 * Add support for subtasks
+
+## 0.0.8
+
+* Fix draw wrong table height when height is smaller than reserved height
