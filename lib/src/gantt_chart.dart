@@ -4,9 +4,9 @@ import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:intl/intl.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
-class GanttChart<T> extends StatefulWidget {
+class GanttChart<T, S> extends StatefulWidget {
   /// List of data to be rendered in the Gantt chart
-  final List<GanttData<T>> data;
+  final List<GanttData<T, S>> data;
 
   /// Initial mode of the Gantt chart
   final GanttMode ganttMode;
@@ -56,18 +56,21 @@ class GanttChart<T> extends StatefulWidget {
   final bool onInitScrollToCurrentDate;
 
   /// Builder for the draggable end date indicator
-  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)?
+  final Widget Function(
+          double rowHeight, double rowSpacing, GanttData<T, S> data)?
       draggableEndIndicatorBuilder;
 
   /// Builder for the draggable start date indicator
-  final Widget Function(double rowHeight, double rowSpacing, GanttData<T> data)?
+  final Widget Function(
+          double rowHeight, double rowSpacing, GanttData<T, S> data)?
       draggableStartIndicatorBuilder;
 
   /// Builder for the task label
   final Widget Function(String textLabel, int index)? taskLabelBuilder;
 
   final void Function(
-      GanttData<T> newData, int index, DragEndDetails dragDetails)? onDragEnd;
+          GanttData<T, S> newData, int index, DragEndDetails dragDetails)?
+      onDragEnd;
 
   /// Set weather the chart should scroll while dragging the draggable indicator on the edge of the screen
   /// Still buggy
@@ -110,10 +113,10 @@ class GanttChart<T> extends StatefulWidget {
   });
 
   @override
-  State<GanttChart> createState() => _GanttChartState<T>();
+  State<GanttChart> createState() => _GanttChartState<T, S>();
 }
 
-class _GanttChartState<T> extends State<GanttChart<T>> {
+class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   final linkedScrollController = LinkedScrollControllerGroup();
   late ScrollController labelScrollController;
   late ScrollController chartScrollController;
@@ -651,7 +654,7 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
     );
   }
 
-  SizedBox buildSubTask(GanttData<dynamic> data, DateTime firstStartDate,
+  SizedBox buildSubTask(GanttData<T, S> data, DateTime firstStartDate,
       int index, BoxConstraints constraints) {
     return SizedBox(
       height: widget.heightPerRow * data.subData.length,
@@ -781,7 +784,7 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
   }
 
   Positioned _buildDraggableEnd(
-    GanttData<dynamic> data,
+    GanttData<T, S> data,
     int index,
     BoxConstraints constraints,
     bool isSelected, {
@@ -878,7 +881,7 @@ class _GanttChartState<T> extends State<GanttChart<T>> {
   }
 
   Positioned _buildDraggableStart(
-    GanttData<dynamic> data,
+    GanttData<T, S> data,
     int index,
     BoxConstraints constraints,
     bool isSelected, {

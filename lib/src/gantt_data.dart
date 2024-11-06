@@ -1,10 +1,10 @@
 /// Wrapper Class to be rendered in the Gantt chart
-class GanttData<T> {
+class GanttData<T, S> {
   final DateTime dateStart;
   final DateTime dateEnd;
   final T data;
   final String label;
-  List<GanttSubData<T>> subData;
+  List<GanttSubData<S>> subData;
 
   GanttData({
     required this.dateStart,
@@ -14,14 +14,14 @@ class GanttData<T> {
     this.subData = const [],
   });
 
-  GanttData<T> copyWith({
+  GanttData<T, S> copyWith({
     DateTime? dateStart,
     DateTime? dateEnd,
     T? data,
     String? label,
-    List<GanttSubData<T>>? subData,
+    List<GanttSubData<S>>? subData,
   }) {
-    return GanttData<T>(
+    return GanttData<T, S>(
       dateStart: dateStart ?? this.dateStart,
       dateEnd: dateEnd ?? this.dateEnd,
       data: data ?? this.data,

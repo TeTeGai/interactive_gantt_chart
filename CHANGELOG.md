@@ -36,3 +36,8 @@
 ## 0.0.8
 
 * Fix draw wrong table height when height is smaller than reserved height
+
+## 0.0.9
+
+* Fix GanttSubData not updated
+* Separating generic type for GanttData and GanttSubData

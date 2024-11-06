@@ -31,8 +31,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<GanttData<Task>> ganttData = DummyData.data.map((task) {
-    return GanttData<Task>(
+  List<GanttData<Task, Task>> ganttData = DummyData.data.map((task) {
+    return GanttData<Task, Task>(
       dateStart: task.start,
       dateEnd: task.end,
       data: task,
@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: GanttChart<Task>(
+                  child: GanttChart<Task, Task>(
                     scrollWhileDrag: true,
                     dayLabelStyle: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.bold),
