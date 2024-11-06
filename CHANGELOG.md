@@ -26,3 +26,18 @@
 
 * Remove pitch to scale the chart parameter
 * Add GanttMode for showing the gantt chart in daily, weekly or monthly mode
+
+## 0.0.7
+
+* Add option to custom each width per day on each GanttMode
+* Show tooltip on date label when on Weekly or Monthly mode
+* Add support for subtasks
+
+## 0.0.8
+
+* Fix draw wrong table height when height is smaller than reserved height
+
+## 0.0.9
+
+* Fix GanttSubData not updated
+* Separating generic type for GanttData and GanttSubData
