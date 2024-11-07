@@ -35,18 +35,34 @@ class GanttData<T, S> {
   }
 
   /// Method to update start & end date based on the subData
-  void updateDate() {
+  void calculateMainDate() {
     if (subData.isEmpty) return;
-    dateStart = subData.map((e) => e.dateStart).reduce((value, element) => value.isBefore(element) ? value : element);
-    dateEnd = subData.map((e) => e.dateEnd).reduce((value, element) => value.isAfter(element) ? value : element);
+    dateStart = subData
+        .map((e) => e.dateStart)
+        .reduce((value, element) => value.isBefore(element) ? value : element);
+    dateEnd = subData
+        .map((e) => e.dateEnd)
+        .reduce((value, element) => value.isAfter(element) ? value : element);
+  }
+
+  /// Method to update all subData based on the main date
+  /// Intended to be used when dragging the main bar
+  void calculateAllDate(DateTime newDateStart, DateTime newDateEnd) {
+    final diff = newDateStart.difference(dateStart);
+    dateStart = newDateStart;
+    dateEnd = newDateEnd;
+    for (GanttSubData<S> element in subData) {
+      element.dateStart = element.dateStart.add(diff);
+      element.dateEnd = element.dateEnd.add(diff);
+    }
   }
 }
 
 /// Wrapper Class to be placed inside GanttData
 /// This class is used to represent a subtask
 class GanttSubData<T> {
-  final DateTime dateStart;
-  final DateTime dateEnd;
+  DateTime dateStart;
+  DateTime dateEnd;
   final T data;
   final String label;
 

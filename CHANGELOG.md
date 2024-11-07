@@ -42,7 +42,10 @@
 * Fix GanttSubData not updated
 * Separating generic type for GanttData and GanttSubData
 
-## 0.0.10
+## 0.1.0
 
-* Dragging subtask outside parent time range now will drag the parent task
-* Optimize some code
+* All the data now displayed inside Stack with Positioned for smoother drag animation
+* GanttData now act as a parent for GanttSubData
+* Dragging GanttData will drag all of its GanttSubData
+* Dragging GanttSubData outside GanttData time range now will expand GanttData time range
+* Optimize code & fix various bugs
