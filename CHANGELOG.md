@@ -41,3 +41,8 @@
 
 * Fix GanttSubData not updated
 * Separating generic type for GanttData and GanttSubData
+
+## 0.0.10
+
+* Dragging subtask outside parent time range now will drag the parent task
+* Optimize some code

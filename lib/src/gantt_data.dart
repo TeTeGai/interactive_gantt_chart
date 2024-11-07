@@ -1,7 +1,7 @@
 /// Wrapper Class to be rendered in the Gantt chart
 class GanttData<T, S> {
-  final DateTime dateStart;
-  final DateTime dateEnd;
+  DateTime dateStart;
+  DateTime dateEnd;
   final T data;
   final String label;
   List<GanttSubData<S>> subData;
@@ -11,7 +11,7 @@ class GanttData<T, S> {
     required this.dateEnd,
     required this.data,
     required this.label,
-    this.subData = const [],
+    required this.subData,
   });
 
   GanttData<T, S> copyWith({
@@ -32,6 +32,13 @@ class GanttData<T, S> {
 
   double getBarHeight(double baseHeight) {
     return baseHeight * (subData.length + 1);
+  }
+
+  /// Method to update start & end date based on the subData
+  void updateDate() {
+    if (subData.isEmpty) return;
+    dateStart = subData.map((e) => e.dateStart).reduce((value, element) => value.isBefore(element) ? value : element);
+    dateEnd = subData.map((e) => e.dateEnd).reduce((value, element) => value.isAfter(element) ? value : element);
   }
 }
 
