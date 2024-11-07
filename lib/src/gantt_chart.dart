@@ -55,6 +55,10 @@ class GanttChart<T, S> extends StatefulWidget {
   /// Make sure that current date is visible when the widget is first rendered
   final bool onInitScrollToCurrentDate;
 
+  /// Width of the draggable indicator
+  /// Used to calculate the position of the draggable indicator especially when custom builder is used
+  final double dragIndicatorWidth;
+
   /// Builder for the draggable end date indicator
   final Widget Function(
           double rowHeight, double rowSpacing, GanttData<T, S> data)?
@@ -71,10 +75,6 @@ class GanttChart<T, S> extends StatefulWidget {
   final void Function(
           GanttData<T, S> newData, int index, DragEndDetails dragDetails)?
       onDragEnd;
-
-  /// Set weather the chart should scroll while dragging the draggable indicator on the edge of the screen
-  /// Still buggy
-  final bool scrollWhileDrag;
 
   const GanttChart({
     super.key,
@@ -99,12 +99,12 @@ class GanttChart<T, S> extends StatefulWidget {
     this.daysBeforeFirstTask = 5,
     this.draggableEndIndicatorBuilder,
     this.draggableStartIndicatorBuilder,
+    this.dragIndicatorWidth = 25.0,
     this.onDragEnd,
     this.labelText = 'Task',
     this.showLabelOnChartBar = true,
     this.chartBarColor = Colors.blue,
     this.chartBarBorderRadius = const BorderRadius.all(Radius.circular(5)),
-    this.scrollWhileDrag = false,
     this.taskLabelBuilder,
     this.onInitScrollToCurrentDate = false,
     this.activeBorderColor = Colors.red,
@@ -483,19 +483,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 ),
               ),
 
-            // horizontal line for rows
-            // for (int i = 0; i < widget.data.length; i++)
-            //   Positioned(
-            //     bottom: i * widget.heightPerRow,
-            //     child: Container(
-            //       height: 1,
-            //       width: maxChartWidth,
-            //       color: (ganttMode == GanttMode.daily)
-            //           ? widget.gridLineColor
-            //           : widget.gridLineColor.withOpacity(0.5),
-            //     ),
-            //   ),
-
             // Additional vertical line for each week or month
             ...verticalGuideLines,
 
@@ -513,124 +500,138 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       itemBuilder: (context, index) {
                         final data = widget.data[index];
                         final duration =
-                            data.dateEnd.difference(data.dateStart);
-                        final width = duration.inDays * widthPerDay;
-                        final start =
+                            data.dateEnd.difference(data.dateStart).inDays + 1;
+                        final width = duration * widthPerDay;
+                        final startDistance = ValueNotifier(
                             data.dateStart.difference(firstStartDate).inDays *
-                                widthPerDay;
+                                widthPerDay);
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(
                               height: widget.heightPerRow,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                              child: Stack(
+                                alignment: Alignment.center,
                                 children: [
-                                  Container(
-                                    width: start,
-                                  ),
                                   ValueListenableBuilder(
                                     valueListenable: selectedTaskIndex,
                                     builder: (context, selectedIndex, _) {
                                       final isSelected = selectedIndex == index;
-                                      return GestureDetector(
-                                        onTap: () =>
-                                            selectedTaskIndex.value = index,
-                                        onHorizontalDragEnd: !isSelected
-                                            ? null
-                                            : (details) {
-                                                widget.onDragEnd?.call(
-                                                  widget.data[index],
-                                                  index,
-                                                  details,
-                                                );
-                                              },
-                                        onHorizontalDragUpdate: !isSelected
-                                            ? null
-                                            : (details) {
-                                                // move entire bar
-                                                final delta = details.delta.dx /
-                                                    4; //slow down the drag
-                                                final deltaDays =
-                                                    ((delta / widthPerDay) * 24)
-                                                        .round();
-                                                final newStart =
-                                                    data.dateStart.add(
-                                                  Duration(days: deltaDays),
-                                                );
-                                                final newEnd = data.dateEnd.add(
-                                                  Duration(days: deltaDays),
-                                                );
-                                                setState(
-                                                  () {
-                                                    widget.data[index] = widget
-                                                        .data[index]
-                                                        .copyWith(
-                                                      dateStart: newStart,
-                                                      dateEnd: newEnd,
-                                                    );
-                                                  },
-                                                );
 
-                                                // scroll while dragging
-                                                if (widget.scrollWhileDrag) {
-                                                  // TODO: Implement scroll while dragging
-                                                }
-                                              },
-                                        child: Tooltip(
-                                          textAlign: TextAlign.center,
-                                          message:
-                                              '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
-                                          child: Container(
-                                            width: width,
-                                            height: widget.heightPerRow -
-                                                widget.rowSpacing,
-                                            decoration: BoxDecoration(
-                                              color: widget.chartBarColor,
-                                              borderRadius:
-                                                  widget.chartBarBorderRadius,
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? widget.activeBorderColor
-                                                    : Colors.transparent,
-                                                width: isSelected
-                                                    ? widget.activeBorderWidth
-                                                    : 0,
-                                              ),
-                                            ),
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              alignment: Alignment.center,
-                                              children: [
-                                                Visibility(
-                                                  visible: widget
-                                                      .showLabelOnChartBar,
-                                                  child: Center(
-                                                    child: Text(data.label),
+                                      // variable for storing bar current distance from the start
+                                      // Fixed value for calculating the new date while dragging
+                                      final distanceFromStart =
+                                          startDistance.value;
+
+                                      // Variable for storing upcoming start and end date while dragging.
+                                      // Only means to used for updating the actual data at the end of the drag
+                                      // to avoid calling setState multiple times
+                                      DateTime newStart = data.dateStart;
+                                      DateTime newEnd = data.dateEnd;
+                                      return ValueListenableBuilder(
+                                          valueListenable: startDistance,
+                                          builder:
+                                              (context, startDistanceValue, _) {
+                                            return Positioned(
+                                              left: startDistanceValue,
+                                              child: GestureDetector(
+                                                onTap: () => selectedTaskIndex
+                                                    .value = index,
+                                                onHorizontalDragEnd: !isSelected
+                                                    ? null
+                                                    : (details) {
+                                                        setState(() {
+                                                          data.calculateAllDate(
+                                                              newStart, newEnd);
+                                                        });
+                                                        widget.onDragEnd?.call(
+                                                          widget.data[index],
+                                                          index,
+                                                          details,
+                                                        );
+                                                      },
+                                                onHorizontalDragUpdate:
+                                                    !isSelected
+                                                        ? null
+                                                        : (details) {
+                                                            final delta =
+                                                                details
+                                                                    .delta.dx;
+
+                                                            late int
+                                                                newDistanceInDays;
+                                                            if (delta > 0) {
+                                                              newDistanceInDays =
+                                                                  ((startDistance.value -
+                                                                              distanceFromStart) /
+                                                                          widthPerDay)
+                                                                      .ceil();
+                                                            } else {
+                                                              newDistanceInDays =
+                                                                  ((startDistance.value -
+                                                                              distanceFromStart) /
+                                                                          widthPerDay)
+                                                                      .floor();
+                                                            }
+                                                            newStart = data
+                                                                .dateStart
+                                                                .add(
+                                                              Duration(
+                                                                  days:
+                                                                      newDistanceInDays),
+                                                            );
+                                                            newEnd = data
+                                                                .dateEnd
+                                                                .add(
+                                                              Duration(
+                                                                  days:
+                                                                      newDistanceInDays),
+                                                            );
+                                                            startDistance
+                                                                    .value =
+                                                                startDistance
+                                                                        .value +
+                                                                    delta;
+                                                          },
+                                                child: Tooltip(
+                                                  textAlign: TextAlign.center,
+                                                  message:
+                                                      '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
+                                                  child: Container(
+                                                    width: width,
+                                                    height:
+                                                        widget.heightPerRow -
+                                                            widget.rowSpacing,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          widget.chartBarColor,
+                                                      borderRadius: widget
+                                                          .chartBarBorderRadius,
+                                                      border: Border.all(
+                                                        color: isSelected
+                                                            ? widget
+                                                                .activeBorderColor
+                                                            : Colors
+                                                                .transparent,
+                                                        width: isSelected
+                                                            ? widget
+                                                                .activeBorderWidth
+                                                            : 0,
+                                                      ),
+                                                    ),
+                                                    child: Visibility(
+                                                      visible: widget
+                                                          .showLabelOnChartBar,
+                                                      child: Center(
+                                                        child: Text(data.label),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
-
-                                                // Draggable Start Indicator
-                                                _buildDraggableStart(
-                                                  data,
-                                                  index,
-                                                  constraints,
-                                                  isSelected,
-                                                ),
-
-                                                // Draggable End Indicator
-                                                _buildDraggableEnd(
-                                                  data,
-                                                  index,
-                                                  constraints,
-                                                  isSelected,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
+                                              ),
+                                            );
+                                          });
                                     },
                                   ),
                                 ],
@@ -663,316 +664,326 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         itemCount: data.subData.length,
         itemBuilder: (_, subIndex) {
           final subData = data.subData[subIndex];
-          final duration = subData.dateEnd.difference(subData.dateStart);
-          final width = duration.inDays * widthPerDay;
-          final start =
-              subData.dateStart.difference(firstStartDate).inDays * widthPerDay;
-          return SizedBox(
-            height: widget.heightPerRow,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: start,
-                ),
-                ValueListenableBuilder(
-                  valueListenable: selectedTaskIndex,
-                  builder: (context, selectedIndex, _) {
-                    final isSelected = selectedIndex ==
-                        int.parse('${index + 1}0${subIndex + 1}');
-                    return GestureDetector(
-                      onTap: () => selectedTaskIndex.value =
-                          int.parse('${index + 1}0${subIndex + 1}'),
-                      onHorizontalDragEnd: !isSelected
-                          ? null
-                          : (details) {
-                              widget.onDragEnd?.call(
-                                widget.data[index],
-                                index,
-                                details,
-                              );
-                            },
-                      onHorizontalDragUpdate: !isSelected
-                          ? null
-                          : (details) {
-                              // move entire bar
-                              final delta =
-                                  details.delta.dx / 2; //slow down the drag
-                              final deltaDays =
-                                  ((delta / widthPerDay) * 24).round();
-                              final newStart = subData.dateStart.add(
-                                Duration(days: deltaDays),
-                              );
-                              final newEnd = subData.dateEnd.add(
-                                Duration(days: deltaDays),
-                              );
-                              setState(
-                                () {
-                                  widget.data[index].subData[subIndex] =
-                                      subData.copyWith(
-                                    dateStart: newStart,
-                                    dateEnd: newEnd,
-                                  );
-                                },
-                              );
+          final duration =
+              subData.dateEnd.difference(subData.dateStart).inDays + 1;
+          final width = duration * widthPerDay;
 
-                              // scroll while dragging
-                              if (widget.scrollWhileDrag) {
-                                // TODO: Implement scroll while dragging
-                              }
-                            },
-                      child: Tooltip(
-                        textAlign: TextAlign.center,
-                        message:
-                            '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
-                        child: Container(
-                          width: width,
-                          height: widget.heightPerRow - widget.rowSpacing,
-                          decoration: BoxDecoration(
-                            color: widget.subTaskBarColor,
-                            borderRadius: widget.chartBarBorderRadius,
-                            border: Border.all(
-                              color: isSelected
-                                  ? widget.activeBorderColor
-                                  : Colors.transparent,
-                              width: isSelected ? widget.activeBorderWidth : 0,
-                            ),
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              Visibility(
-                                visible: widget.showLabelOnChartBar,
-                                child: Center(
-                                  child: Text(subData.label),
+          // variable for storing the start distance from the first start date
+          // reactive variable for updating the bar position while dragging
+          final startDistance = ValueNotifier(
+              subData.dateStart.difference(firstStartDate).inDays *
+                  widthPerDay);
+
+          // variable for storing bar current distance from the start
+          // Fixed value for calculating the new date while dragging
+          final distanceFromStart = startDistance.value;
+
+          return ValueListenableBuilder(
+            valueListenable: selectedTaskIndex,
+            builder: (context, selectedIndex, _) {
+              final isSelected =
+                  selectedIndex == int.parse('${index + 1}0${subIndex + 1}');
+
+              // Variable for storing upcoming start and end date while dragging.
+              // Only means to used for updating the actual data at the end of the drag
+              // to avoid calling setState multiple times
+              DateTime newStart = subData.dateStart;
+              DateTime newEnd = subData.dateEnd;
+
+              // To notify the indicator that the parent is dragging
+              final isDragging = ValueNotifier(false);
+
+              // To notify the parent that the indicator is dragging
+              final isIndicatorDragging = ValueNotifier(false);
+
+              return SizedBox(
+                height: widget.heightPerRow,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ValueListenableBuilder(
+                        valueListenable: isIndicatorDragging,
+                        builder: (context, isIndicatorDraggingState, _) {
+                          if (isIndicatorDraggingState)
+                            return const SizedBox.shrink();
+                          return ValueListenableBuilder(
+                            valueListenable: startDistance,
+                            builder: (context, startDistanceValue, _) {
+                              return Positioned(
+                                left: startDistanceValue,
+                                child: GestureDetector(
+                                  onTap: () => selectedTaskIndex.value =
+                                      int.parse('${index + 1}0${subIndex + 1}'),
+                                  onHorizontalDragEnd: !isSelected
+                                      ? null
+                                      : (details) {
+                                          setState(
+                                            () {
+                                              widget.data[index]
+                                                      .subData[subIndex] =
+                                                  subData.copyWith(
+                                                dateStart: newStart,
+                                                dateEnd: newEnd,
+                                              );
+                                              widget.data[index]
+                                                  .calculateMainDate();
+                                            },
+                                          );
+
+                                          widget.onDragEnd?.call(
+                                            widget.data[index],
+                                            index,
+                                            details,
+                                          );
+
+                                          isDragging.value = false;
+                                        },
+                                  onHorizontalDragUpdate: !isSelected
+                                      ? null
+                                      : (details) {
+                                          isDragging.value = true;
+
+                                          // move entire bar
+                                          final delta = details.delta.dx;
+
+                                          late int newDistanceInDays;
+                                          if (delta > 0) {
+                                            newDistanceInDays =
+                                                ((startDistance.value -
+                                                            distanceFromStart) /
+                                                        widthPerDay)
+                                                    .ceil();
+                                          } else {
+                                            newDistanceInDays =
+                                                ((startDistance.value -
+                                                            distanceFromStart) /
+                                                        widthPerDay)
+                                                    .floor();
+                                          }
+                                          newStart = subData.dateStart.add(
+                                            Duration(days: newDistanceInDays),
+                                          );
+                                          newEnd = subData.dateEnd.add(
+                                            Duration(days: newDistanceInDays),
+                                          );
+
+                                          startDistance.value =
+                                              startDistance.value + delta;
+                                        },
+                                  child: Tooltip(
+                                    textAlign: TextAlign.center,
+                                    message:
+                                        '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
+                                    child: Container(
+                                      width: width,
+                                      height: widget.heightPerRow -
+                                          widget.rowSpacing,
+                                      decoration: BoxDecoration(
+                                        color: widget.subTaskBarColor,
+                                        borderRadius: !isSelected
+                                            ? widget.chartBarBorderRadius
+                                            : null,
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? widget.activeBorderColor
+                                              : Colors.transparent,
+                                          width: isSelected
+                                              ? widget.activeBorderWidth
+                                              : 0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              );
+                            },
+                          );
+                        }),
 
-                              // SubDraggable Start Indicator
-                              _buildDraggableStart(
-                                data,
-                                index,
-                                constraints,
-                                isSelected,
-                                isSubTask: true,
-                                subIndex: subIndex,
-                              ),
+                    // SubDraggable Start Indicator
+                    _buildSubDataIndicator(
+                      data,
+                      index,
+                      isSelected: isSelected,
+                      isStart: true,
+                      subIndex: subIndex,
+                      parentDistanceFromStart: startDistance.value,
+                      isParentDragging: isDragging,
+                      isIndicatorDragging: isIndicatorDragging,
+                      barWidth: width,
+                    ),
 
-                              // SubDraggable End Indicator
-                              _buildDraggableEnd(
-                                data,
-                                index,
-                                constraints,
-                                isSelected,
-                                isSubTask: true,
-                                subIndex: subIndex,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                    // SubDraggable End Indicator
+                    _buildSubDataIndicator(
+                      data,
+                      index,
+                      isSelected: isSelected,
+                      isStart: false,
+                      subIndex: subIndex,
+                      parentDistanceFromStart: startDistance.value,
+                      isParentDragging: isDragging,
+                      isIndicatorDragging: isIndicatorDragging,
+                      barWidth: width,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Positioned _buildDraggableEnd(
+  Widget _buildSubDataIndicator(
     GanttData<T, S> data,
-    int index,
-    BoxConstraints constraints,
-    bool isSelected, {
-    bool isSubTask = false,
-    int subIndex = -1,
+    int index, {
+    required bool isSelected,
+    required bool isStart,
+    required double parentDistanceFromStart,
+    required ValueNotifier<bool> isParentDragging,
+    required ValueNotifier<bool> isIndicatorDragging,
+    required int subIndex,
+    required double barWidth,
   }) {
-    // assert that subIndex is not -1 if isSubTask is true
-    assert(!isSubTask || subIndex != -1);
-    return Positioned(
-      right: 0,
-      child: Builder(builder: (context) {
-        final newWidth = ValueNotifier(0.0);
-        return GestureDetector(
-          onHorizontalDragEnd: !isSelected
-              ? null
-              : (details) {
-                  final newWidth = details.localPosition.dx;
-                  final dateEnd = (isSubTask)
-                      ? data.subData[subIndex].dateEnd
-                      : data.dateEnd;
-                  late DateTime newEnd;
-                  // check if direction is right or left
-                  if (details.velocity.pixelsPerSecond.dx < 0) {
-                    newEnd = dateEnd.subtract(
-                      Duration(days: (newWidth / widthPerDay).round()),
-                    );
-                  } else {
-                    newEnd = dateEnd.add(
-                      Duration(days: (newWidth / widthPerDay).round()),
-                    );
-                  }
-                  setState(() {
-                    if (isSubTask) {
-                      widget.data[index].subData[subIndex] = widget
-                          .data[index].subData[subIndex]
-                          .copyWith(dateEnd: newEnd);
-                    } else {
-                      widget.data[index] =
-                          widget.data[index].copyWith(dateEnd: newEnd);
-                    }
-                  });
-                  widget.onDragEnd?.call(
-                    widget.data[index],
-                    index,
-                    details,
-                  );
-                },
-          onHorizontalDragUpdate: !isSelected
-              ? null
-              : (details) {
-                  newWidth.value = details.localPosition.dx;
+    // assert(!isSubTask || subIndex != -1);
+    if (!isSelected) return const SizedBox();
 
-                  if (widget.scrollWhileDrag) {
-                    if (details.globalPosition.dx >
-                        (constraints.maxWidth) - 50) {
-                      chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset +
-                            details.delta.dx,
-                      );
-                      newWidth.value +=
-                          details.primaryDelta! + widthPerDay - 10;
-                    } else if (details.globalPosition.dx < 150) {
-                      chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset +
-                            details.delta.dx,
-                      );
-                      newWidth.value +=
-                          details.primaryDelta! - widthPerDay + 10;
-                    }
-                  }
-                },
-          child: Visibility(
-            visible: isSelected,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Visual indicator for the draggableEnd indicator
-                ValueListenableBuilder(
-                  valueListenable: newWidth,
-                  builder: (_, value, __) {
-                    return Positioned(
-                      left: value,
-                      child: _buildDraggableEndIndicator(index),
-                    );
-                  },
+    final subData = data.subData[subIndex];
+
+    // Used to make the indicator independent from the parent while only dragging the indicator
+    final indicatorDistance = ValueNotifier(parentDistanceFromStart);
+
+    // variable for storing bar current distance from the start
+    // Fixed value for calculating the new date while dragging
+    final distanceFromStart = indicatorDistance.value;
+
+    // Variable for storing upcoming start and end date while dragging.
+    // Only means to used for updating the actual data at the end of the drag
+    // to avoid calling setState multiple times
+    DateTime newDate = isStart ? subData.dateStart : subData.dateEnd;
+
+    double indicatorLocalPosition = 0.0;
+
+    return ValueListenableBuilder(
+      valueListenable: isParentDragging,
+      builder: (context, isParentDraggingState, _) {
+        if (isParentDraggingState) return const SizedBox.shrink();
+        return ValueListenableBuilder(
+          valueListenable: indicatorDistance,
+          builder: (context, indicatorDistanceValue, _) {
+            return Positioned(
+              left: isStart
+                  ? indicatorDistanceValue - (widget.dragIndicatorWidth)
+                  : (isIndicatorDragging.value)
+                      ? indicatorDistanceValue - indicatorLocalPosition
+                      : indicatorDistanceValue + barWidth,
+              child: GestureDetector(
+                onHorizontalDragEnd: !isSelected
+                    ? null
+                    : (details) {
+                        setState(() {
+                          if (isStart) {
+                            data.subData[subIndex] = subData.copyWith(
+                              dateStart: newDate,
+                            );
+                          } else {
+                            data.subData[subIndex] = subData.copyWith(
+                              dateEnd: newDate,
+                            );
+                          }
+
+                          data.calculateMainDate();
+                        });
+
+                        widget.onDragEnd?.call(
+                          data,
+                          index,
+                          details,
+                        );
+                      },
+                onHorizontalDragUpdate: !isSelected
+                    ? null
+                    : (details) {
+                        isIndicatorDragging.value = true;
+
+                        final delta = details.localPosition.dx;
+
+                        // prevent indicator to be dragged outside the endDate for start indicator and vice versa
+                        if (isStart && delta > barWidth - widthPerDay) {
+                          return;
+                        } else if (!isStart &&
+                            delta < -barWidth + widthPerDay) {
+                          return;
+                        }
+
+                        late int newDistanceInDays;
+                        if (delta > 0) {
+                          newDistanceInDays =
+                              ((indicatorDistanceValue - distanceFromStart) /
+                                      widthPerDay)
+                                  .ceil();
+                        } else {
+                          newDistanceInDays =
+                              ((indicatorDistanceValue - distanceFromStart) /
+                                      widthPerDay)
+                                  .floor();
+                        }
+
+                        if (isStart) {
+                          newDate = subData.dateStart.add(
+                            Duration(days: newDistanceInDays),
+                          );
+                        } else {
+                          newDate = subData.dateEnd.add(
+                            Duration(days: newDistanceInDays),
+                          );
+                        }
+
+                        indicatorDistance.value =
+                            delta + parentDistanceFromStart;
+
+                        indicatorLocalPosition = details.localPosition.dx;
+                      },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Widget for replace the chart bar while dragging the indicator
+                    if (isIndicatorDragging.value && !isStart)
+                      Container(
+                        width: barWidth + indicatorLocalPosition,
+                        height: widget.heightPerRow - widget.rowSpacing,
+                        decoration: BoxDecoration(
+                          color: widget.subTaskBarColor,
+                          border: Border.all(
+                            color: widget.activeBorderColor,
+                            width: widget.activeBorderWidth,
+                          ),
+                        ),
+                      ),
+
+                    _buildIndicator(data, isStart),
+
+                    // Widget for replace the chart bar while dragging the indicator
+                    if (isIndicatorDragging.value && isStart)
+                      Container(
+                        width: barWidth - indicatorLocalPosition,
+                        height: widget.heightPerRow - widget.rowSpacing,
+                        decoration: BoxDecoration(
+                          color: widget.subTaskBarColor,
+                          border: Border.all(
+                            color: widget.activeBorderColor,
+                            width: widget.activeBorderWidth,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                _buildDraggableEndIndicator(index),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
-      }),
-    );
-  }
-
-  Positioned _buildDraggableStart(
-    GanttData<T, S> data,
-    int index,
-    BoxConstraints constraints,
-    bool isSelected, {
-    bool isSubTask = false,
-    int subIndex = -1,
-  }) {
-    assert(!isSubTask || subIndex != -1);
-    return Positioned(
-      left: 0,
-      child: Builder(builder: (context) {
-        final newWidth = ValueNotifier(0.0);
-        return GestureDetector(
-          onHorizontalDragEnd: !isSelected
-              ? null
-              : (details) {
-                  final newWidth = details.localPosition.dx;
-                  final dateStart = (isSubTask)
-                      ? data.subData[subIndex].dateStart
-                      : data.dateStart;
-                  late DateTime newStart;
-                  // check if direction is right or left
-                  if (details.velocity.pixelsPerSecond.dx < 0) {
-                    newStart = dateStart.subtract(
-                      Duration(days: (newWidth / widthPerDay).round()),
-                    );
-                  } else {
-                    newStart = dateStart.add(
-                      Duration(days: (newWidth / widthPerDay).round()),
-                    );
-                  }
-                  setState(() {
-                    if (isSubTask) {
-                      widget.data[index].subData[subIndex] = widget
-                          .data[index].subData[subIndex]
-                          .copyWith(dateStart: newStart);
-                    } else {
-                      widget.data[index] =
-                          widget.data[index].copyWith(dateStart: newStart);
-                    }
-                  });
-                  widget.onDragEnd?.call(
-                    widget.data[index],
-                    index,
-                    details,
-                  );
-                },
-          onHorizontalDragUpdate: !isSelected
-              ? null
-              : (details) {
-                  newWidth.value = details.localPosition.dx;
-
-                  if (widget.scrollWhileDrag) {
-                    if (details.globalPosition.dx >
-                        (constraints.maxWidth) - 50) {
-                      chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset +
-                            details.delta.dx,
-                      );
-                      newWidth.value +=
-                          details.primaryDelta! + widthPerDay - 10;
-                    } else if (details.globalPosition.dx < 150) {
-                      chartHorizontalScrollController.jumpTo(
-                        chartHorizontalScrollController.offset +
-                            details.delta.dx,
-                      );
-                      newWidth.value +=
-                          details.primaryDelta! - widthPerDay + 10;
-                    }
-                  }
-                },
-          child: Visibility(
-            visible: isSelected,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Visual indicator for the draggableEnd indicator
-                ValueListenableBuilder(
-                  valueListenable: newWidth,
-                  builder: (_, value, __) {
-                    return Positioned(
-                      left: value,
-                      child: _buildDraggableStartIndicator(index),
-                    );
-                  },
-                ),
-                _buildDraggableStartIndicator(index),
-              ],
-            ),
-          ),
-        );
-      }),
+      },
     );
   }
 
@@ -1005,43 +1016,36 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     );
   }
 
-  Widget _buildDraggableStartIndicator(int index) {
-    if (widget.draggableEndIndicatorBuilder != null) {
-      return widget.draggableEndIndicatorBuilder!(
-          widget.heightPerRow, widget.rowSpacing, widget.data[index]);
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: widget.activeBorderColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(5),
-          bottomLeft: Radius.circular(5),
-        ),
-      ),
-      height: widget.heightPerRow - widget.rowSpacing,
-      child: const Icon(Icons.drag_indicator, color: Colors.white),
-    );
-  }
-
-  Widget _buildDraggableEndIndicator(int index) {
-    if (widget.draggableEndIndicatorBuilder != null) {
+  Widget _buildIndicator(GanttData<T, S> data, bool isStart) {
+    if (isStart && widget.draggableStartIndicatorBuilder != null) {
+      return widget.draggableStartIndicatorBuilder!(
+        widget.heightPerRow,
+        widget.rowSpacing,
+        data,
+      );
+    } else if (!isStart && widget.draggableEndIndicatorBuilder != null) {
       return widget.draggableEndIndicatorBuilder!(
         widget.heightPerRow,
         widget.rowSpacing,
-        widget.data[index],
+        data,
       );
     }
 
     return Container(
-      height: widget.heightPerRow - widget.rowSpacing,
       decoration: BoxDecoration(
         color: widget.activeBorderColor,
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(5),
-          bottomRight: Radius.circular(5),
-        ),
+        borderRadius: isStart
+            ? const BorderRadius.only(
+                topLeft: Radius.circular(5),
+                bottomLeft: Radius.circular(5),
+              )
+            : const BorderRadius.only(
+                topRight: Radius.circular(5),
+                bottomRight: Radius.circular(5),
+              ),
       ),
+      height: widget.heightPerRow - widget.rowSpacing,
+      width: widget.dragIndicatorWidth,
       child: const Icon(Icons.drag_indicator, color: Colors.white),
     );
   }
