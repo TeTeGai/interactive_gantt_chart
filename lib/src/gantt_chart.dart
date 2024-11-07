@@ -610,108 +610,132 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
           final subData = data.subData[subIndex];
           final duration = subData.dateEnd.difference(subData.dateStart);
           final width = duration.inDays * widthPerDay;
-          final start = subData.dateStart.difference(firstStartDate).inDays * widthPerDay;
+          final distanceInPixel = ValueNotifier(subData.dateStart.difference(firstStartDate).inDays * widthPerDay);
           return SizedBox(
             height: widget.heightPerRow,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Stack(
               children: [
-                Container(
-                  width: start,
-                ),
                 ValueListenableBuilder(
                   valueListenable: selectedTaskIndex,
                   builder: (context, selectedIndex, _) {
                     final isSelected = selectedIndex == int.parse('${index + 1}0${subIndex + 1}');
-                    return GestureDetector(
-                      onTap: () => selectedTaskIndex.value = int.parse('${index + 1}0${subIndex + 1}'),
-                      onHorizontalDragEnd: !isSelected
-                          ? null
-                          : (details) {
-                              widget.onDragEnd?.call(
-                                widget.data[index],
-                                index,
-                                details,
-                              );
-                            },
-                      onHorizontalDragUpdate: !isSelected
-                          ? null
-                          : (details) {
-                              // move entire bar
-                              final delta = details.delta.dx / 2; //slow down the drag
-                              final deltaDays = ((delta / widthPerDay) * 24).round();
-                              final newStart = subData.dateStart.add(
-                                Duration(days: deltaDays),
-                              );
-                              final newEnd = subData.dateEnd.add(
-                                Duration(days: deltaDays),
-                              );
-                              setState(
-                                () {
-                                  widget.data[index].subData[subIndex] = subData.copyWith(
-                                    dateStart: newStart,
-                                    dateEnd: newEnd,
-                                  );
-                                },
-                              );
+                    DateTime newStart = subData.dateStart;
+                    DateTime newEnd = subData.dateEnd;
 
-                              // scroll while dragging
-                              if (widget.scrollWhileDrag) {
-                                // TODO: Implement scroll while dragging
-                              }
-                            },
-                      child: Tooltip(
-                        textAlign: TextAlign.center,
-                        message:
-                            '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
-                        child: Container(
-                          width: width,
-                          height: widget.heightPerRow - widget.rowSpacing,
-                          decoration: BoxDecoration(
-                            color: widget.subTaskBarColor,
-                            borderRadius: widget.chartBarBorderRadius,
-                            border: Border.all(
-                              color: isSelected ? widget.activeBorderColor : Colors.transparent,
-                              width: isSelected ? widget.activeBorderWidth : 0,
-                            ),
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              Visibility(
-                                visible: widget.showLabelOnChartBar,
-                                child: Center(
-                                  child: Text(subData.label),
+                    // variable for storing bar current distance from the start
+                    final distanceFromStart = (subData.dateStart.difference(firstStartDate).inDays * widthPerDay);
+
+                    return ValueListenableBuilder(
+                        valueListenable: distanceInPixel,
+                        builder: (context, startValue, _) {
+                          return Positioned(
+                            left: startValue,
+                            child: GestureDetector(
+                              onTap: () => selectedTaskIndex.value = int.parse('${index + 1}0${subIndex + 1}'),
+                              onHorizontalDragEnd: !isSelected
+                                  ? null
+                                  : (details) {
+                                      setState(
+                                        () {
+                                          widget.data[index].subData[subIndex] = subData.copyWith(
+                                            dateStart: newStart,
+                                            dateEnd: newEnd,
+                                          );
+                                          widget.data[index].updateDate();
+                                        },
+                                      );
+
+                                      widget.onDragEnd?.call(
+                                        widget.data[index],
+                                        index,
+                                        details,
+                                      );
+                                    },
+                              onHorizontalDragUpdate: !isSelected
+                                  ? null
+                                  : (details) {
+                                      // move entire bar
+                                      final delta = details.delta.dx;
+
+                                      late int newDistanceInDays;
+                                      if (delta > 0) {
+                                        newDistanceInDays = ((distanceInPixel.value - distanceFromStart) / widthPerDay).ceil();
+                                      } else {
+                                        newDistanceInDays = ((distanceInPixel.value - distanceFromStart) / widthPerDay).floor();
+                                      }
+                                      newStart = subData.dateStart.add(
+                                        Duration(days: newDistanceInDays),
+                                      );
+                                      newEnd = subData.dateEnd.add(
+                                        Duration(days: newDistanceInDays),
+                                      );
+                                      // print('NewStart: ${newStart.day}');
+                                      // print('DeltaDays: $deltaDays');
+                                      // print('delta: ${delta/widthPerDay}');
+                                      // print('tempStart: ${(tempStart.value /  widthPerDay) - widget.daysBeforeFirstTask}');
+                                      // print('new distance in days: ${(tempStart.value - distanceFromStart)/widthPerDay}');
+
+                                      distanceInPixel.value = distanceInPixel.value + delta;
+
+                                      // scroll while dragging
+                                      if (widget.scrollWhileDrag) {
+                                        // TODO: Implement scroll while dragging
+                                      }
+                                    },
+                              child: Tooltip(
+                                textAlign: TextAlign.center,
+                                message:
+                                    '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
+                                child: Container(
+                                  width: width,
+                                  height: widget.heightPerRow - widget.rowSpacing,
+                                  decoration: BoxDecoration(
+                                    color: widget.subTaskBarColor,
+                                    borderRadius: widget.chartBarBorderRadius,
+                                    border: Border.all(
+                                      color: isSelected ? widget.activeBorderColor : Colors.transparent,
+                                      width: isSelected ? widget.activeBorderWidth : 0,
+                                    ),
+                                  ),
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Visibility(
+                                        visible: widget.showLabelOnChartBar,
+                                        child: Center(
+                                          child: Text(subData.label),
+                                        ),
+                                      ),
+
+                                      // SubDraggable Start Indicator
+                                      _buildDraggable(
+                                        data,
+                                        index,
+                                        constraints: constraints,
+                                        isSelected: isSelected,
+                                        isStart: true,
+                                        isSubTask: true,
+                                        subIndex: subIndex,
+                                      ),
+
+                                      // SubDraggable End Indicator
+                                      _buildDraggable(
+                                        data,
+                                        index,
+                                        constraints: constraints,
+                                        isSelected: isSelected,
+                                        isStart: false,
+                                        isSubTask: true,
+                                        subIndex: subIndex,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-
-                              // SubDraggable Start Indicator
-                              _buildDraggable(
-                                data,
-                                index,
-                                constraints: constraints,
-                                isSelected: isSelected,
-                                isStart: true,
-                                isSubTask: true,
-                                subIndex: subIndex,
-                              ),
-
-                              // SubDraggable End Indicator
-                              _buildDraggable(
-                                data,
-                                index,
-                                constraints: constraints,
-                                isSelected: isSelected,
-                                isStart: false,
-                                isSubTask: true,
-                                subIndex: subIndex,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
+                            ),
+                          );
+                        });
                   },
                 ),
               ],
