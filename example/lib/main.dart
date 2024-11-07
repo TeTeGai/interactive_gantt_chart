@@ -31,23 +31,23 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<GanttData<Task, Task>> ganttData = DummyData.data.map((task) {
-    return GanttData<Task, Task>(
+  List<GanttData<Task, String>> ganttData = DummyData.data.map((task) {
+    return GanttData<Task, String>(
       dateStart: task.start,
       dateEnd: task.end,
       data: task,
       label: task.name,
       subData: [
-        GanttSubData<Task>(
+        GanttSubData(
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
-          data: task,
+          data: 'Sub ${task.name}',
           label: 'Sub ${task.name}',
         ),
-        GanttSubData<Task>(
+        GanttSubData(
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
-          data: task,
+          data: 'Sub ${task.name}',
           label: 'Sub ${task.name}',
         ),
       ],
@@ -57,10 +57,10 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     ganttData[0].subData.add(
-          GanttSubData<Task>(
+          GanttSubData<String>(
             dateStart: ganttData[0].data.start,
             dateEnd: ganttData[0].data.end,
-            data: ganttData[0].data,
+            data: ganttData[0].label,
             label: ganttData[0].data.name,
           ),
         );
@@ -78,8 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: GanttChart<Task, Task>(
-                    scrollWhileDrag: true,
+                  child: GanttChart<Task, String>(
                     dayLabelStyle: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.bold),
                     taskLabelBuilder: (data, index) {
