@@ -49,3 +49,8 @@
 * Dragging GanttData will drag all of its GanttSubData
 * Dragging GanttSubData outside GanttData time range now will expand GanttData time range
 * Optimize code & fix various bugs
+
+## 0.1.1
+
+* Change some Positioned widget to AnimatedPositioned for smoother drag animation
+* Add optional AnimationDuration for drag animation duration

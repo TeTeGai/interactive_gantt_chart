@@ -52,6 +52,9 @@ class GanttChart<T, S> extends StatefulWidget {
   final double activeBorderWidth;
   final Color tableOuterColor;
 
+  /// Animation duration used on some elements
+  final Duration animationDuration;
+
   /// Make sure that current date is visible when the widget is first rendered
   final bool onInitScrollToCurrentDate;
 
@@ -61,20 +64,26 @@ class GanttChart<T, S> extends StatefulWidget {
 
   /// Builder for the draggable end date indicator
   final Widget Function(
-          double rowHeight, double rowSpacing, GanttData<T, S> data)?
-      draggableEndIndicatorBuilder;
+    double rowHeight,
+    double rowSpacing,
+    GanttData<T, S> data,
+  )? draggableEndIndicatorBuilder;
 
   /// Builder for the draggable start date indicator
   final Widget Function(
-          double rowHeight, double rowSpacing, GanttData<T, S> data)?
-      draggableStartIndicatorBuilder;
+    double rowHeight,
+    double rowSpacing,
+    GanttData<T, S> data,
+  )? draggableStartIndicatorBuilder;
 
   /// Builder for the task label
   final Widget Function(String textLabel, int index)? taskLabelBuilder;
 
   final void Function(
-          GanttData<T, S> newData, int index, DragEndDetails dragDetails)?
-      onDragEnd;
+    GanttData<T, S> newData,
+    int index,
+    DragEndDetails dragDetails,
+  )? onDragEnd;
 
   const GanttChart({
     super.key,
@@ -92,9 +101,7 @@ class GanttChart<T, S> extends StatefulWidget {
       fontSize: 16,
       fontWeight: FontWeight.bold,
     ),
-    this.dayLabelStyle = const TextStyle(
-      fontSize: 12,
-    ),
+    this.dayLabelStyle = const TextStyle(fontSize: 12),
     this.daysAfterLastTask = 10,
     this.daysBeforeFirstTask = 5,
     this.draggableEndIndicatorBuilder,
@@ -110,6 +117,7 @@ class GanttChart<T, S> extends StatefulWidget {
     this.activeBorderColor = Colors.red,
     this.activeBorderWidth = 2,
     this.subTaskBarColor = Colors.blueGrey,
+    this.animationDuration = const Duration(milliseconds: 300),
   });
 
   @override
@@ -188,24 +196,31 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
 
   @override
   Widget build(BuildContext context) {
-    final firstStartDate =
-        widget.data.fold(DateTime.now(), (previousValue, element) {
+    final firstStartDate = widget.data.fold(DateTime.now(), (
+      previousValue,
+      element,
+    ) {
       return element.dateStart.isBefore(previousValue)
           ? element.dateStart
           : previousValue;
     }).subtract(
       Duration(days: widget.daysBeforeFirstTask),
     );
-    final firstEndDate =
-        widget.data.fold(DateTime.now(), (previousValue, element) {
+
+    final firstEndDate = widget.data.fold(DateTime.now(), (
+      previousValue,
+      element,
+    ) {
       return element.dateEnd.isAfter(previousValue)
           ? element.dateEnd
           : previousValue;
     }).add(Duration(days: widget.daysAfterLastTask));
+
     final maxChartWidth =
         (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
 
     final dayLabelHeight = widget.heightPerRow * 0.5;
+
     // Sum realChartHeight with all the sub task, +1 for border
     final realChartHeight = 1 +
         dayLabelHeight +
@@ -225,7 +240,10 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Left side (Task label Section)
-              _buildTaskLabel(),
+              _buildTaskLabel(
+                constraints,
+                realChartHeight,
+              ),
 
               // Right side
               SizedBox(
@@ -273,9 +291,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     });
   }
 
-  SizedBox _buildTaskLabel() {
+  SizedBox _buildTaskLabel(
+    BoxConstraints constraints,
+    double realChartHeight,
+  ) {
     return SizedBox(
       width: widget.labelWidth,
+      height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+          ? constraints.maxHeight
+          : realChartHeight + widget.heightPerRow,
       child: Column(
         children: [
           SizedBox(
@@ -336,8 +360,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     DateTime firstStartDate,
   ) {
     List<Widget> labelWidgets = [];
-    List<Positioned> verticalGuideLines =
-        []; // additional vertical lines for week or month
+    // additional vertical lines for week or month
+    List<Positioned> verticalGuideLines = [];
 
     DateFormat weekFormat = DateFormat('EEEE');
 
@@ -396,14 +420,12 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         // Show week label (e.g., 'Week of 1st Jan') and calculate the dynamic width
         labelText =
             'Week of ${currentDate.day} ${DateFormat('MMM').format(currentDate)}';
-        labelWidth =
-            widthPerDay * daysToShow; // Dynamically calculate the label width
+        labelWidth = widthPerDay * daysToShow;
       } else if (ganttMode == GanttMode.monthly && isStartOfMonth) {
         // Show month label (e.g., 'Jan 2022') and calculate the dynamic width
         labelText =
             '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
-        labelWidth =
-            widthPerDay * daysToShow; // Dynamically calculate the label width
+        labelWidth = widthPerDay * daysToShow;
       }
 
       final tooltipMessage = switch (ganttMode) {
@@ -514,133 +536,23 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  ValueListenableBuilder(
-                                    valueListenable: selectedTaskIndex,
-                                    builder: (context, selectedIndex, _) {
-                                      final isSelected = selectedIndex == index;
-
-                                      // variable for storing bar current distance from the start
-                                      // Fixed value for calculating the new date while dragging
-                                      final distanceFromStart =
-                                          startDistance.value;
-
-                                      // Variable for storing upcoming start and end date while dragging.
-                                      // Only means to used for updating the actual data at the end of the drag
-                                      // to avoid calling setState multiple times
-                                      DateTime newStart = data.dateStart;
-                                      DateTime newEnd = data.dateEnd;
-                                      return ValueListenableBuilder(
-                                          valueListenable: startDistance,
-                                          builder:
-                                              (context, startDistanceValue, _) {
-                                            return Positioned(
-                                              left: startDistanceValue,
-                                              child: GestureDetector(
-                                                onTap: () => selectedTaskIndex
-                                                    .value = index,
-                                                onHorizontalDragEnd: !isSelected
-                                                    ? null
-                                                    : (details) {
-                                                        setState(() {
-                                                          data.calculateAllDate(
-                                                              newStart, newEnd);
-                                                        });
-                                                        widget.onDragEnd?.call(
-                                                          widget.data[index],
-                                                          index,
-                                                          details,
-                                                        );
-                                                      },
-                                                onHorizontalDragUpdate:
-                                                    !isSelected
-                                                        ? null
-                                                        : (details) {
-                                                            final delta =
-                                                                details
-                                                                    .delta.dx;
-
-                                                            late int
-                                                                newDistanceInDays;
-                                                            if (delta > 0) {
-                                                              newDistanceInDays =
-                                                                  ((startDistance.value -
-                                                                              distanceFromStart) /
-                                                                          widthPerDay)
-                                                                      .ceil();
-                                                            } else {
-                                                              newDistanceInDays =
-                                                                  ((startDistance.value -
-                                                                              distanceFromStart) /
-                                                                          widthPerDay)
-                                                                      .floor();
-                                                            }
-                                                            newStart = data
-                                                                .dateStart
-                                                                .add(
-                                                              Duration(
-                                                                  days:
-                                                                      newDistanceInDays),
-                                                            );
-                                                            newEnd = data
-                                                                .dateEnd
-                                                                .add(
-                                                              Duration(
-                                                                  days:
-                                                                      newDistanceInDays),
-                                                            );
-                                                            startDistance
-                                                                    .value =
-                                                                startDistance
-                                                                        .value +
-                                                                    delta;
-                                                          },
-                                                child: Tooltip(
-                                                  textAlign: TextAlign.center,
-                                                  message:
-                                                      '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
-                                                  child: Container(
-                                                    width: width,
-                                                    height:
-                                                        widget.heightPerRow -
-                                                            widget.rowSpacing,
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          widget.chartBarColor,
-                                                      borderRadius: widget
-                                                          .chartBarBorderRadius,
-                                                      border: Border.all(
-                                                        color: isSelected
-                                                            ? widget
-                                                                .activeBorderColor
-                                                            : Colors
-                                                                .transparent,
-                                                        width: isSelected
-                                                            ? widget
-                                                                .activeBorderWidth
-                                                            : 0,
-                                                      ),
-                                                    ),
-                                                    child: Visibility(
-                                                      visible: widget
-                                                          .showLabelOnChartBar,
-                                                      child: Center(
-                                                        child: Text(data.label),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          });
-                                    },
+                                  buildMainDataBar(
+                                    index,
+                                    startDistance,
+                                    data,
+                                    width,
                                   ),
                                 ],
                               ),
                             ),
 
-                            // Render sub task
-                            buildSubTask(
-                                data, firstStartDate, index, constraints),
+                            // Render sub data
+                            buildSubData(
+                              data,
+                              firstStartDate,
+                              index,
+                              constraints,
+                            ),
                           ],
                         );
                       },
@@ -655,8 +567,105 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     );
   }
 
-  SizedBox buildSubTask(GanttData<T, S> data, DateTime firstStartDate,
-      int index, BoxConstraints constraints) {
+  ValueListenableBuilder<int> buildMainDataBar(
+    int index,
+    ValueNotifier<double> startDistance,
+    GanttData<dynamic, dynamic> data,
+    double width,
+  ) {
+    return ValueListenableBuilder(
+      valueListenable: selectedTaskIndex,
+      builder: (context, selectedIndex, _) {
+        final isSelected = selectedIndex == index;
+
+        // variable for storing bar current distance from the start
+        // Fixed value for calculating the new date while dragging
+        final distanceFromStart = startDistance.value;
+
+        // Variable for storing upcoming start and end date while dragging.
+        // Only means to used for updating the actual data at the end of the drag
+        // to avoid calling setState multiple times
+        DateTime newStart = data.dateStart;
+        DateTime newEnd = data.dateEnd;
+        return ValueListenableBuilder(
+          valueListenable: startDistance,
+          builder: (context, startDistanceValue, _) {
+            return AnimatedPositioned(
+              duration: widget.animationDuration,
+              left: startDistanceValue,
+              child: GestureDetector(
+                onTap: () => selectedTaskIndex.value = index,
+                onHorizontalDragEnd: !isSelected
+                    ? null
+                    : (details) {
+                        setState(() {
+                          data.calculateAllDate(newStart, newEnd);
+                        });
+                        widget.onDragEnd?.call(
+                          widget.data[index],
+                          index,
+                          details,
+                        );
+                      },
+                onHorizontalDragUpdate: !isSelected
+                    ? null
+                    : (details) {
+                        final delta = details.delta.dx;
+
+                        final rawDistance =
+                            ((startDistance.value - distanceFromStart) /
+                                widthPerDay);
+                        final newDistanceInDays = (delta > 0)
+                            ? rawDistance.ceil()
+                            : rawDistance.floor();
+
+                        newStart = data.dateStart.add(
+                          Duration(days: newDistanceInDays),
+                        );
+                        newEnd = data.dateEnd.add(
+                          Duration(days: newDistanceInDays),
+                        );
+                        startDistance.value = startDistance.value + delta;
+                      },
+                child: Tooltip(
+                  textAlign: TextAlign.center,
+                  message:
+                      '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
+                  child: Container(
+                    width: width,
+                    height: widget.heightPerRow - widget.rowSpacing,
+                    decoration: BoxDecoration(
+                      color: widget.chartBarColor,
+                      borderRadius: widget.chartBarBorderRadius,
+                      border: Border.all(
+                        color: isSelected
+                            ? widget.activeBorderColor
+                            : Colors.transparent,
+                        width: isSelected ? widget.activeBorderWidth : 0,
+                      ),
+                    ),
+                    child: Visibility(
+                      visible: widget.showLabelOnChartBar,
+                      child: Center(
+                        child: Text(data.label),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  SizedBox buildSubData(
+    GanttData<T, S> data,
+    DateTime firstStartDate,
+    int index,
+    BoxConstraints constraints,
+  ) {
     return SizedBox(
       height: widget.heightPerRow * data.subData.length,
       child: ListView.builder(
@@ -702,103 +711,100 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                   alignment: Alignment.center,
                   children: [
                     ValueListenableBuilder(
-                        valueListenable: isIndicatorDragging,
-                        builder: (context, isIndicatorDraggingState, _) {
-                          if (isIndicatorDraggingState)
-                            return const SizedBox.shrink();
-                          return ValueListenableBuilder(
-                            valueListenable: startDistance,
-                            builder: (context, startDistanceValue, _) {
-                              return Positioned(
-                                left: startDistanceValue,
-                                child: GestureDetector(
-                                  onTap: () => selectedTaskIndex.value =
-                                      int.parse('${index + 1}0${subIndex + 1}'),
-                                  onHorizontalDragEnd: !isSelected
-                                      ? null
-                                      : (details) {
-                                          setState(
-                                            () {
-                                              widget.data[index]
-                                                      .subData[subIndex] =
-                                                  subData.copyWith(
-                                                dateStart: newStart,
-                                                dateEnd: newEnd,
-                                              );
-                                              widget.data[index]
-                                                  .calculateMainDate();
-                                            },
-                                          );
+                      valueListenable: isIndicatorDragging,
+                      builder: (context, isIndicatorDraggingState, _) {
+                        if (isIndicatorDraggingState) {
+                          return const SizedBox.shrink();
+                        }
+                        return ValueListenableBuilder(
+                          valueListenable: startDistance,
+                          builder: (context, startDistanceValue, _) {
+                            return AnimatedPositioned(
+                              duration: widget.animationDuration,
+                              left: startDistanceValue,
+                              child: GestureDetector(
+                                onTap: () => selectedTaskIndex.value =
+                                    int.parse('${index + 1}0${subIndex + 1}'),
+                                onHorizontalDragEnd: !isSelected
+                                    ? null
+                                    : (details) {
+                                        setState(
+                                          () {
+                                            widget.data[index]
+                                                    .subData[subIndex] =
+                                                subData.copyWith(
+                                              dateStart: newStart,
+                                              dateEnd: newEnd,
+                                            );
+                                            widget.data[index]
+                                                .calculateMainDate();
+                                          },
+                                        );
 
-                                          widget.onDragEnd?.call(
-                                            widget.data[index],
-                                            index,
-                                            details,
-                                          );
+                                        widget.onDragEnd?.call(
+                                          widget.data[index],
+                                          index,
+                                          details,
+                                        );
 
-                                          isDragging.value = false;
-                                        },
-                                  onHorizontalDragUpdate: !isSelected
-                                      ? null
-                                      : (details) {
-                                          isDragging.value = true;
+                                        isDragging.value = false;
+                                      },
+                                onHorizontalDragUpdate: !isSelected
+                                    ? null
+                                    : (details) {
+                                        isDragging.value = true;
 
-                                          // move entire bar
-                                          final delta = details.delta.dx;
+                                        // move entire bar
+                                        final delta = details.delta.dx;
 
-                                          late int newDistanceInDays;
-                                          if (delta > 0) {
-                                            newDistanceInDays =
-                                                ((startDistance.value -
-                                                            distanceFromStart) /
-                                                        widthPerDay)
-                                                    .ceil();
-                                          } else {
-                                            newDistanceInDays =
-                                                ((startDistance.value -
-                                                            distanceFromStart) /
-                                                        widthPerDay)
-                                                    .floor();
-                                          }
-                                          newStart = subData.dateStart.add(
-                                            Duration(days: newDistanceInDays),
-                                          );
-                                          newEnd = subData.dateEnd.add(
-                                            Duration(days: newDistanceInDays),
-                                          );
+                                        final rawDistance =
+                                            (startDistance.value -
+                                                    distanceFromStart) /
+                                                widthPerDay;
+                                        final newDistanceInDays = (delta > 0)
+                                            ? rawDistance.ceil()
+                                            : rawDistance.floor();
 
-                                          startDistance.value =
-                                              startDistance.value + delta;
-                                        },
-                                  child: Tooltip(
-                                    textAlign: TextAlign.center,
-                                    message:
-                                        '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
-                                    child: Container(
-                                      width: width,
-                                      height: widget.heightPerRow -
-                                          widget.rowSpacing,
-                                      decoration: BoxDecoration(
-                                        color: widget.subTaskBarColor,
-                                        borderRadius: !isSelected
-                                            ? widget.chartBarBorderRadius
-                                            : null,
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? widget.activeBorderColor
-                                              : Colors.transparent,
-                                          width: isSelected
-                                              ? widget.activeBorderWidth
-                                              : 0,
-                                        ),
+                                        newStart = subData.dateStart.add(
+                                          Duration(days: newDistanceInDays),
+                                        );
+                                        newEnd = subData.dateEnd.add(
+                                          Duration(days: newDistanceInDays),
+                                        );
+
+                                        startDistance.value =
+                                            startDistance.value + delta;
+                                      },
+                                child: Tooltip(
+                                  textAlign: TextAlign.center,
+                                  message:
+                                      '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
+                                  child: Container(
+                                    width: width,
+                                    height:
+                                        widget.heightPerRow - widget.rowSpacing,
+                                    decoration: BoxDecoration(
+                                      color: widget.subTaskBarColor,
+                                      borderRadius: !isSelected
+                                          ? widget.chartBarBorderRadius
+                                          : null,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? widget.activeBorderColor
+                                            : Colors.transparent,
+                                        width: isSelected
+                                            ? widget.activeBorderWidth
+                                            : 0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          );
-                        }),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                     // SubDraggable Start Indicator
                     _buildSubDataIndicator(
@@ -917,18 +923,12 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                           return;
                         }
 
-                        late int newDistanceInDays;
-                        if (delta > 0) {
-                          newDistanceInDays =
-                              ((indicatorDistanceValue - distanceFromStart) /
-                                      widthPerDay)
-                                  .ceil();
-                        } else {
-                          newDistanceInDays =
-                              ((indicatorDistanceValue - distanceFromStart) /
-                                      widthPerDay)
-                                  .floor();
-                        }
+                        final rawDistance =
+                            (indicatorDistanceValue - distanceFromStart) /
+                                widthPerDay;
+                        final newDistanceInDays = (delta > 0)
+                            ? rawDistance.ceil()
+                            : rawDistance.floor();
 
                         if (isStart) {
                           newDate = subData.dateStart.add(
