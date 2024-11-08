@@ -240,7 +240,10 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Left side (Task label Section)
-              _buildTaskLabel(),
+              _buildTaskLabel(
+                constraints,
+                realChartHeight,
+              ),
 
               // Right side
               SizedBox(
@@ -288,9 +291,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     });
   }
 
-  SizedBox _buildTaskLabel() {
+  SizedBox _buildTaskLabel(
+    BoxConstraints constraints,
+    double realChartHeight,
+  ) {
     return SizedBox(
       width: widget.labelWidth,
+      height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+          ? constraints.maxHeight
+          : realChartHeight + widget.heightPerRow,
       child: Column(
         children: [
           SizedBox(
