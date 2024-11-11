@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/src/gantt_data.dart';
 import 'package:interactive_gantt_chart/src/gantt_mode.dart';
+import 'package:interactive_gantt_chart/src/utils.dart';
 import 'package:intl/intl.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
@@ -419,7 +420,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       } else if (ganttMode == GanttMode.weekly && isStartOfWeek) {
         // Show week label (e.g., 'Week of 1st Jan') and calculate the dynamic width
         labelText =
-            'Week of ${currentDate.day} ${DateFormat('MMM').format(currentDate)}';
+            '${DateFormat('dd MMM').format(currentDate)} - ${DateFormat('dd MMM').format(currentDate.add(Duration(days: daysToShow - 1)))}';
         labelWidth = widthPerDay * daysToShow;
       } else if (ganttMode == GanttMode.monthly && isStartOfMonth) {
         // Show month label (e.g., 'Jan 2022') and calculate the dynamic width
@@ -612,19 +613,21 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     : (details) {
                         final delta = details.delta.dx;
 
-                        final rawDistance =
-                            ((startDistance.value - distanceFromStart) /
-                                widthPerDay);
-                        final newDistanceInDays = (delta > 0)
-                            ? rawDistance.ceil()
-                            : rawDistance.floor();
+                        moveEntireBar(
+                          deltaDX: delta,
+                          startDistance: startDistance.value,
+                          distanceFromStart: distanceFromStart,
+                          widthPerDay: widthPerDay,
+                          onNewDistance: (int newDistanceInDays) {
+                            newStart = data.dateStart.add(
+                              Duration(days: newDistanceInDays),
+                            );
+                            newEnd = data.dateEnd.add(
+                              Duration(days: newDistanceInDays),
+                            );
+                          },
+                        );
 
-                        newStart = data.dateStart.add(
-                          Duration(days: newDistanceInDays),
-                        );
-                        newEnd = data.dateEnd.add(
-                          Duration(days: newDistanceInDays),
-                        );
                         startDistance.value = startDistance.value + delta;
                       },
                 child: Tooltip(
@@ -754,22 +757,22 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     : (details) {
                                         isDragging.value = true;
 
-                                        // move entire bar
                                         final delta = details.delta.dx;
 
-                                        final rawDistance =
-                                            (startDistance.value -
-                                                    distanceFromStart) /
-                                                widthPerDay;
-                                        final newDistanceInDays = (delta > 0)
-                                            ? rawDistance.ceil()
-                                            : rawDistance.floor();
-
-                                        newStart = subData.dateStart.add(
-                                          Duration(days: newDistanceInDays),
-                                        );
-                                        newEnd = subData.dateEnd.add(
-                                          Duration(days: newDistanceInDays),
+                                        moveEntireBar(
+                                          deltaDX: delta,
+                                          startDistance: startDistance.value,
+                                          distanceFromStart: distanceFromStart,
+                                          widthPerDay: widthPerDay,
+                                          onNewDistance:
+                                              (int newDistanceInDays) {
+                                            newStart = subData.dateStart.add(
+                                              Duration(days: newDistanceInDays),
+                                            );
+                                            newEnd = subData.dateEnd.add(
+                                              Duration(days: newDistanceInDays),
+                                            );
+                                          },
                                         );
 
                                         startDistance.value =
