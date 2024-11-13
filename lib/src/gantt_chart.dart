@@ -103,8 +103,8 @@ class GanttChart<T, S> extends StatefulWidget {
       fontWeight: FontWeight.bold,
     ),
     this.dayLabelStyle = const TextStyle(fontSize: 12),
-    this.daysAfterLastTask = 10,
-    this.daysBeforeFirstTask = 5,
+    this.daysAfterLastTask = 15,
+    this.daysBeforeFirstTask = 15,
     this.draggableEndIndicatorBuilder,
     this.draggableStartIndicatorBuilder,
     this.dragIndicatorWidth = 25.0,
@@ -517,46 +517,59 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     children: labelWidgets,
                   ),
                   Expanded(
-                    child: ListView.builder(
-                      controller: chartScrollController,
-                      itemCount: widget.data.length,
-                      itemBuilder: (context, index) {
-                        final data = widget.data[index];
-                        final duration =
-                            data.dateEnd.difference(data.dateStart).inDays + 1;
-                        final width = duration * widthPerDay;
-                        final startDistance = ValueNotifier(
-                            data.dateStart.difference(firstStartDate).inDays *
+                    child: Stack(
+                      children: [
+                        ...generateArrows(
+                          widget.data,
+                          widthPerDay: widthPerDay,
+                          heightPerRow: widget.heightPerRow,
+                          firstDateShown: firstStartDate,
+                          indicatorWidth: widget.dragIndicatorWidth,
+                        ),
+                        ListView.builder(
+                          controller: chartScrollController,
+                          itemCount: widget.data.length,
+                          itemBuilder: (context, index) {
+                            final data = widget.data[index];
+                            final duration =
+                                data.dateEnd.difference(data.dateStart).inDays +
+                                    1;
+                            final width = duration * widthPerDay;
+                            final startDistance = ValueNotifier(data.dateStart
+                                    .difference(firstStartDate)
+                                    .inDays *
                                 widthPerDay);
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              height: widget.heightPerRow,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  buildMainDataBar(
-                                    index,
-                                    startDistance,
-                                    data,
-                                    width,
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  height: widget.heightPerRow,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      buildMainDataBar(
+                                        index,
+                                        startDistance,
+                                        data,
+                                        width,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
+                                ),
 
-                            // Render sub data
-                            buildSubData(
-                              data,
-                              firstStartDate,
-                              index,
-                              constraints,
-                            ),
-                          ],
-                        );
-                      },
+                                // Render sub data
+                                buildSubData(
+                                  data,
+                                  firstStartDate,
+                                  index,
+                                  constraints,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -713,6 +726,31 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    // Arrow
+                    // ...subData.getDependencies(data.subData).map((dependency) {
+                    //   return Positioned(
+                    //     left: 0,
+                    //     child: Container(
+                    //       clipBehavior: Clip.none,
+                    //       color: Colors.red,
+                    //       width: width,
+                    //       child: CustomPaint(
+                    //         painter: ArrowPainter(
+                    //           firstDateShown: firstStartDate,
+                    //           dependentSubData: dependency,
+                    //           dependentIndex: dependency.getIndexFromEntireData(widget.data),
+                    //           pointedSubData: subData,
+                    //           pointedIndex: subData.getIndexFromEntireData(widget.data),
+                    //           widthPerDay: widthPerDay,
+                    //           heightPerRow: widget.heightPerRow,
+                    //           indicatorWidth: widget.dragIndicatorWidth,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   );
+                    // }),
+
+                    // SubData Bar
                     ValueListenableBuilder(
                       valueListenable: isIndicatorDragging,
                       builder: (context, isIndicatorDraggingState, _) {

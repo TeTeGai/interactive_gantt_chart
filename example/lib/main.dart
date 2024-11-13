@@ -39,16 +39,19 @@ class _MyHomePageState extends State<MyHomePage> {
       label: task.name,
       subData: [
         GanttSubData(
+          id: '${task.name}sub1',
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
-          label: 'Sub ${task.name}',
+          label: 'Sub ${task.name} 1',
         ),
         GanttSubData(
+          id: '${task.name}sub2',
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
-          label: 'Sub ${task.name}',
+          label: 'Sub ${task.name} 2',
+          dependencies: ['${task.name}sub1'],
         ),
       ],
     );
@@ -58,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     ganttData[0].subData.add(
           GanttSubData<String>(
+            id: 'sub3',
             dateStart: ganttData[0].data.start,
             dateEnd: ganttData[0].data.end,
             data: ganttData[0].label,
