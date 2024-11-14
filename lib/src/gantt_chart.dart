@@ -52,6 +52,8 @@ class GanttChart<T, S> extends StatefulWidget {
   final Color activeBorderColor;
   final double activeBorderWidth;
   final Color tableOuterColor;
+  final Color arrowColor;
+  final double arrowSize;
 
   /// Animation duration used on some elements
   final Duration animationDuration;
@@ -107,7 +109,7 @@ class GanttChart<T, S> extends StatefulWidget {
     this.daysBeforeFirstTask = 15,
     this.draggableEndIndicatorBuilder,
     this.draggableStartIndicatorBuilder,
-    this.dragIndicatorWidth = 25.0,
+    this.dragIndicatorWidth = 14.0,
     this.onDragEnd,
     this.labelText = 'Task',
     this.showLabelOnChartBar = true,
@@ -119,6 +121,8 @@ class GanttChart<T, S> extends StatefulWidget {
     this.activeBorderWidth = 2,
     this.subTaskBarColor = Colors.blueGrey,
     this.animationDuration = const Duration(milliseconds: 300),
+    this.arrowColor = Colors.blue,
+    this.arrowSize = 6,
   });
 
   @override
@@ -525,6 +529,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                           heightPerRow: widget.heightPerRow,
                           firstDateShown: firstStartDate,
                           indicatorWidth: widget.dragIndicatorWidth,
+                          arrowColor: widget.arrowColor,
+                          arrowSize: widget.arrowSize,
                         ),
                         ListView.builder(
                           controller: chartScrollController,
@@ -1087,7 +1093,18 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       ),
       height: widget.heightPerRow - widget.rowSpacing,
       width: widget.dragIndicatorWidth,
-      child: const Icon(Icons.drag_indicator, color: Colors.white),
+      padding: EdgeInsets.only(
+        top: 4,
+        bottom: 4,
+        left: isStart ? 4 : 2,
+        right: isStart ? 2 : 4,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          color: widget.chartBarColor,
+        ),
+      ),
     );
   }
 }

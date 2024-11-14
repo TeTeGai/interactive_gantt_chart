@@ -16,6 +16,7 @@ class ArrowPainter extends CustomPainter {
   final double indicatorWidth;
   final double arrowSize;
   final DateTime firstDateShown;
+  final Color arrowColor;
 
   const ArrowPainter({
     required this.dependentSubData,
@@ -25,8 +26,9 @@ class ArrowPainter extends CustomPainter {
     required this.widthPerDay,
     required this.heightPerRow,
     required this.indicatorWidth,
-    this.arrowSize = 10,
+    required this.arrowSize,
     required this.firstDateShown,
+    required this.arrowColor,
   });
 
   @override
@@ -40,11 +42,11 @@ class ArrowPainter extends CustomPainter {
     final endY = pointedIndex * heightPerRow + heightPerRow / 2;
 
     final midPointX = (startX + endX) / 2;
-    final midPointY = (startY + endY) / 2;
+    final midPointY = startY + heightPerRow / 2;
     final paint = Paint()
-      ..color = Colors.blue
+      ..color = arrowColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
+      ..strokeWidth = arrowSize / 2;
 
     final path = Path()..moveTo(startX, startY);
 

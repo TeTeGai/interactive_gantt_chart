@@ -66,6 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
             dateEnd: ganttData[0].data.end,
             data: ganttData[0].label,
             label: ganttData[0].data.name,
+            dependencies: ['${ganttData.first.data.name}sub1'],
           ),
         );
     super.initState();

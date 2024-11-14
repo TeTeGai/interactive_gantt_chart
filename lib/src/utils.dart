@@ -23,6 +23,8 @@ List<Widget> generateArrows(
   required double heightPerRow,
   required DateTime firstDateShown,
   required double indicatorWidth,
+  required Color arrowColor,
+  required double arrowSize,
 }) {
   final arrows = <Widget>[];
   // int pointedIndex = 0;
@@ -51,6 +53,8 @@ List<Widget> generateArrows(
               heightPerRow: heightPerRow,
               indicatorWidth: indicatorWidth,
               firstDateShown: firstDateShown,
+              arrowColor: arrowColor,
+              arrowSize: arrowSize,
             ),
           ),
         );
