@@ -42,7 +42,12 @@ class ArrowPainter extends CustomPainter {
     final endY = pointedIndex * heightPerRow + heightPerRow / 2;
 
     final midPointX = (startX + endX) / 2;
-    final midPointY = startY + heightPerRow / 2;
+    late final double midPointY;
+    if (pointedIndex < dependentIndex) {
+      midPointY = endY + heightPerRow / 2;
+    } else {
+      midPointY = endY - heightPerRow / 2;
+    }
     final paint = Paint()
       ..color = arrowColor
       ..style = PaintingStyle.stroke
@@ -62,9 +67,7 @@ class ArrowPainter extends CustomPainter {
         ..lineTo(midPointX, endY);
     }
 
-    path
-      ..lineTo(endX - (indicatorWidth + 5), endY)
-      ..lineTo(endX, endY);
+    path.lineTo(endX - (indicatorWidth + 5), endY);
 
     // draw arrow head
     path

@@ -55,6 +55,10 @@ class GanttChart<T, S> extends StatefulWidget {
   final Color arrowColor;
   final double arrowSize;
 
+  /// Enable the magnet drag feature
+  /// If enabled, the draggable bar & indicator will snap to the nearest date
+  final bool enableMagnetDrag;
+
   /// Animation duration used on some elements
   final Duration animationDuration;
 
@@ -123,6 +127,7 @@ class GanttChart<T, S> extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 300),
     this.arrowColor = Colors.blue,
     this.arrowSize = 6,
+    this.enableMagnetDrag = true,
   });
 
   @override
@@ -136,6 +141,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   final chartHorizontalScrollController = ScrollController();
   final dateLabel = ValueNotifier(DateTime.now());
   final selectedTaskIndex = ValueNotifier<int>(0);
+  final arrowState = ValueNotifier(false);
   late double widthPerDay;
   late GanttMode ganttMode;
 
@@ -523,15 +529,23 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                   Expanded(
                     child: Stack(
                       children: [
-                        ...generateArrows(
-                          widget.data,
-                          widthPerDay: widthPerDay,
-                          heightPerRow: widget.heightPerRow,
-                          firstDateShown: firstStartDate,
-                          indicatorWidth: widget.dragIndicatorWidth,
-                          arrowColor: widget.arrowColor,
-                          arrowSize: widget.arrowSize,
-                        ),
+                        ValueListenableBuilder(
+                            valueListenable: arrowState,
+                            builder: (context, _, __) {
+                              return Column(
+                                children: [
+                                  ...generateArrows(
+                                    widget.data,
+                                    widthPerDay: widthPerDay,
+                                    heightPerRow: widget.heightPerRow,
+                                    firstDateShown: firstStartDate,
+                                    indicatorWidth: widget.dragIndicatorWidth,
+                                    arrowColor: widget.arrowColor,
+                                    arrowSize: widget.arrowSize,
+                                  ),
+                                ],
+                              );
+                            }),
                         ListView.builder(
                           controller: chartScrollController,
                           itemCount: widget.data.length,
@@ -630,24 +644,22 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 onHorizontalDragUpdate: !isSelected
                     ? null
                     : (details) {
-                        final delta = details.delta.dx;
-
                         moveEntireBar(
-                          deltaDX: delta,
+                          deltaDX: details.delta.dx,
                           startDistance: startDistance.value,
                           distanceFromStart: distanceFromStart,
                           widthPerDay: widthPerDay,
-                          onNewDistance: (int newDistanceInDays) {
+                          enableMagnetDrag: widget.enableMagnetDrag,
+                          onNewDistance: (newDistanceInDays, newStartDistance) {
                             newStart = data.dateStart.add(
                               Duration(days: newDistanceInDays),
                             );
                             newEnd = data.dateEnd.add(
                               Duration(days: newDistanceInDays),
                             );
+                            startDistance.value = newStartDistance;
                           },
                         );
-
-                        startDistance.value = startDistance.value + delta;
                       },
                 child: Tooltip(
                   textAlign: TextAlign.center,
@@ -715,12 +727,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
               final isSelected =
                   selectedIndex == int.parse('${index + 1}0${subIndex + 1}');
 
-              // Variable for storing upcoming start and end date while dragging.
-              // Only means to used for updating the actual data at the end of the drag
-              // to avoid calling setState multiple times
-              DateTime newStart = subData.dateStart;
-              DateTime newEnd = subData.dateEnd;
-
               // To notify the indicator that the parent is dragging
               final isDragging = ValueNotifier(false);
 
@@ -732,30 +738,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Arrow
-                    // ...subData.getDependencies(data.subData).map((dependency) {
-                    //   return Positioned(
-                    //     left: 0,
-                    //     child: Container(
-                    //       clipBehavior: Clip.none,
-                    //       color: Colors.red,
-                    //       width: width,
-                    //       child: CustomPaint(
-                    //         painter: ArrowPainter(
-                    //           firstDateShown: firstStartDate,
-                    //           dependentSubData: dependency,
-                    //           dependentIndex: dependency.getIndexFromEntireData(widget.data),
-                    //           pointedSubData: subData,
-                    //           pointedIndex: subData.getIndexFromEntireData(widget.data),
-                    //           widthPerDay: widthPerDay,
-                    //           heightPerRow: widget.heightPerRow,
-                    //           indicatorWidth: widget.dragIndicatorWidth,
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   );
-                    // }),
-
                     // SubData Bar
                     ValueListenableBuilder(
                       valueListenable: isIndicatorDragging,
@@ -778,12 +760,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                         setState(
                                           () {
                                             widget.data[index]
-                                                    .subData[subIndex] =
-                                                subData.copyWith(
-                                              dateStart: newStart,
-                                              dateEnd: newEnd,
-                                            );
-                                            widget.data[index]
                                                 .calculateMainDate();
                                           },
                                         );
@@ -801,26 +777,43 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     : (details) {
                                         isDragging.value = true;
 
-                                        final delta = details.delta.dx;
-
                                         moveEntireBar(
-                                          deltaDX: delta,
+                                          deltaDX: details.delta.dx,
                                           startDistance: startDistance.value,
                                           distanceFromStart: distanceFromStart,
                                           widthPerDay: widthPerDay,
-                                          onNewDistance:
-                                              (int newDistanceInDays) {
-                                            newStart = subData.dateStart.add(
-                                              Duration(days: newDistanceInDays),
+                                          enableMagnetDrag:
+                                              widget.enableMagnetDrag,
+                                          onNewDistance: (newDistanceInDays,
+                                              newStartDistance) {
+                                            // Update the subData date
+                                            widget.data[index]
+                                                    .subData[subIndex] =
+                                                subData.copyWith(
+                                              dateStart: subData.dateStart.add(
+                                                Duration(
+                                                    days: newDistanceInDays),
+                                              ),
+                                              dateEnd: subData.dateEnd.add(
+                                                Duration(
+                                                    days: newDistanceInDays),
+                                              ),
                                             );
-                                            newEnd = subData.dateEnd.add(
-                                              Duration(days: newDistanceInDays),
-                                            );
+
+                                            // Update the start distance to re-render the bar
+                                            startDistance.value =
+                                                newStartDistance;
+
+                                            // Trigger re-rendering of the arrow
+                                            if (newStartDistance ==
+                                                newDistanceInDays *
+                                                        widthPerDay +
+                                                    distanceFromStart) {
+                                              arrowState.value =
+                                                  !arrowState.value;
+                                            }
                                           },
                                         );
-
-                                        startDistance.value =
-                                            startDistance.value + delta;
                                       },
                                 child: Tooltip(
                                   textAlign: TextAlign.center,
@@ -911,11 +904,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     // Fixed value for calculating the new date while dragging
     final distanceFromStart = indicatorDistance.value;
 
-    // Variable for storing upcoming start and end date while dragging.
-    // Only means to used for updating the actual data at the end of the drag
-    // to avoid calling setState multiple times
-    DateTime newDate = isStart ? subData.dateStart : subData.dateEnd;
-
+    // Used to calculate the new date while dragging, which to show dynamic bar width
     double indicatorLocalPosition = 0.0;
 
     return ValueListenableBuilder(
@@ -936,16 +925,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     ? null
                     : (details) {
                         setState(() {
-                          if (isStart) {
-                            data.subData[subIndex] = subData.copyWith(
-                              dateStart: newDate,
-                            );
-                          } else {
-                            data.subData[subIndex] = subData.copyWith(
-                              dateEnd: newDate,
-                            );
-                          }
-
                           data.calculateMainDate();
                         });
 
@@ -976,21 +955,45 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                         final newDistanceInDays = (delta > 0)
                             ? rawDistance.ceil()
                             : rawDistance.floor();
+                        double newIndicatorDistance =
+                            parentDistanceFromStart + delta;
+
+                        if (widget.enableMagnetDrag) {
+                          if (newIndicatorDistance % widthPerDay <
+                              widthPerDay / 10) {
+                            newIndicatorDistance = newIndicatorDistance -
+                                (newIndicatorDistance % widthPerDay);
+                          } else if (newIndicatorDistance % widthPerDay >
+                              widthPerDay * 9 / 10) {
+                            newIndicatorDistance = newIndicatorDistance +
+                                widthPerDay -
+                                (newIndicatorDistance % widthPerDay);
+                          }
+                        }
 
                         if (isStart) {
-                          newDate = subData.dateStart.add(
-                            Duration(days: newDistanceInDays),
+                          data.subData[subIndex] = subData.copyWith(
+                            dateStart: subData.dateStart.add(
+                              Duration(days: newDistanceInDays),
+                            ),
                           );
                         } else {
-                          newDate = subData.dateEnd.add(
-                            Duration(days: newDistanceInDays),
+                          data.subData[subIndex] = subData.copyWith(
+                            dateEnd: subData.dateEnd.add(
+                              Duration(days: newDistanceInDays),
+                            ),
                           );
                         }
 
-                        indicatorDistance.value =
-                            delta + parentDistanceFromStart;
+                        indicatorDistance.value = newIndicatorDistance;
 
                         indicatorLocalPosition = details.localPosition.dx;
+
+                        if (newIndicatorDistance ==
+                            newDistanceInDays * widthPerDay +
+                                distanceFromStart) {
+                          arrowState.value = !arrowState.value;
+                        }
                       },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

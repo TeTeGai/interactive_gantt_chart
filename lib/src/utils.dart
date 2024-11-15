@@ -8,13 +8,25 @@ void moveEntireBar({
   required double startDistance,
   required double distanceFromStart,
   required double widthPerDay,
-  required Function(int distanceInDays) onNewDistance,
+  required bool enableMagnetDrag,
+  required Function(int distanceInDays, double newStartDistance) onNewDistance,
 }) {
   final rawDistance = (startDistance - distanceFromStart) / widthPerDay;
   final newDistanceInDays =
       (deltaDX > 0) ? rawDistance.ceil() : rawDistance.floor();
 
-  onNewDistance(newDistanceInDays);
+  // distance for current animation
+  double newStartDistance = startDistance + deltaDX;
+  if (enableMagnetDrag) {
+    if (newStartDistance % widthPerDay < widthPerDay / 10) {
+      newStartDistance = newStartDistance - (newStartDistance % widthPerDay);
+    } else if (newStartDistance % widthPerDay > widthPerDay * 9 / 10) {
+      newStartDistance =
+          newStartDistance + widthPerDay - (newStartDistance % widthPerDay);
+    }
+  }
+
+  onNewDistance(newDistanceInDays, newStartDistance);
 }
 
 List<Widget> generateArrows(
@@ -27,11 +39,11 @@ List<Widget> generateArrows(
   required double arrowSize,
 }) {
   final arrows = <Widget>[];
-  // int pointedIndex = 0;
+// int pointedIndex = 0;
   for (GanttData data in listData) {
-    // pointedIndex++;
+// pointedIndex++;
     for (GanttSubData subData in data.subData) {
-      // pointedIndex++;
+// pointedIndex++;
       for (String dependency in subData.dependencies) {
         final dependentSubData =
             subData.getDependencies(data.subData).firstWhere(
