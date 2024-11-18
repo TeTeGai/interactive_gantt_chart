@@ -18,9 +18,9 @@ void moveEntireBar({
   // distance for current animation
   double newStartDistance = startDistance + deltaDX;
   if (enableMagnetDrag) {
-    if (newStartDistance % widthPerDay < widthPerDay / 10) {
+    if (newStartDistance % widthPerDay < widthPerDay * 0.5 / 10) {
       newStartDistance = newStartDistance - (newStartDistance % widthPerDay);
-    } else if (newStartDistance % widthPerDay > widthPerDay * 9 / 10) {
+    } else if (newStartDistance % widthPerDay > widthPerDay * 9.5 / 10) {
       newStartDistance =
           newStartDistance + widthPerDay - (newStartDistance % widthPerDay);
     }
@@ -68,6 +68,7 @@ List<Widget> generateArrows(
               arrowColor: arrowColor,
               arrowSize: arrowSize,
             ),
+            size: Size.infinite,
           ),
         );
       }

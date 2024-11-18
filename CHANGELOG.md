@@ -58,4 +58,5 @@
 ## 0.1.2
 
 * Add optional snap drag to date (default to true)
+* Add feature to resize label width
 * Fix some bugs on displayed arrow dependencies 

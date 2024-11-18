@@ -20,8 +20,8 @@ class GanttChart<T, S> extends StatefulWidget {
   /// Height of each row in the chart
   final double heightPerRow;
 
-  /// Width of the label section
-  final double labelWidth;
+  /// Initial width of the label section
+  final double initialLabelWidth;
 
   /// Spacing between each row
   /// Is actually act like a vertical padding to make the chart bar looks smaller
@@ -97,11 +97,11 @@ class GanttChart<T, S> extends StatefulWidget {
     required this.data,
     this.ganttMode = GanttMode.daily,
     this.tableOuterColor = Colors.black,
-    this.widthPerDayDaily = 50.0,
+    this.widthPerDayDaily = 45.0,
     this.widthPerDayWeekly = 25.0,
     this.widthPerDayMonthly = 5.0,
     this.heightPerRow = 50.0,
-    this.labelWidth = 100.0,
+    this.initialLabelWidth = 100.0,
     this.rowSpacing = 15.0,
     this.gridLineColor = Colors.grey,
     this.headerLabelStyle = const TextStyle(
@@ -115,7 +115,7 @@ class GanttChart<T, S> extends StatefulWidget {
     this.draggableStartIndicatorBuilder,
     this.dragIndicatorWidth = 14.0,
     this.onDragEnd,
-    this.labelText = 'Task',
+    this.labelText = 'Projects',
     this.showLabelOnChartBar = true,
     this.chartBarColor = Colors.blue,
     this.chartBarBorderRadius = const BorderRadius.all(Radius.circular(5)),
@@ -138,20 +138,24 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   final linkedScrollController = LinkedScrollControllerGroup();
   late ScrollController labelScrollController;
   late ScrollController chartScrollController;
+  late ScrollController arrowsScrollController;
   final chartHorizontalScrollController = ScrollController();
   final dateLabel = ValueNotifier(DateTime.now());
   final selectedTaskIndex = ValueNotifier<int>(0);
   final arrowState = ValueNotifier(false);
   late double widthPerDay;
   late GanttMode ganttMode;
+  final labelWidth = ValueNotifier(0.0);
 
   @override
   void initState() {
+    labelWidth.value = widget.initialLabelWidth;
     // init width per day value
     changeGanttMode(widget.ganttMode);
 
     labelScrollController = linkedScrollController.addAndGet();
     chartScrollController = linkedScrollController.addAndGet();
+    arrowsScrollController = linkedScrollController.addAndGet();
 
     chartHorizontalScrollController.addListener(() {
       final firstStartDate = widget.data.fold(
@@ -243,124 +247,161 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         );
 
     return LayoutBuilder(builder: (context, constraints) {
-      return GestureDetector(
-        child: SizedBox(
-          height: constraints.maxHeight,
-          width: constraints.maxWidth,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left side (Task label Section)
-              _buildTaskLabel(
-                constraints,
-                realChartHeight,
-              ),
+      return SizedBox(
+        height: constraints.maxHeight,
+        width: constraints.maxWidth,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left side (Task label Section)
+            _buildTaskLabel(
+              constraints,
+              realChartHeight,
+            ),
 
-              // Right side
-              SizedBox(
-                width: constraints.maxWidth - widget.labelWidth,
-                child: Column(
-                  children: [
-                    Row(
+            // Right side
+            ValueListenableBuilder(
+                valueListenable: labelWidth,
+                builder: (context, labelWidthValue, _) {
+                  return SizedBox(
+                    width: constraints.maxWidth - labelWidthValue,
+                    child: Column(
                       children: [
-                        // Date label for Years & month
-                        _buildYearMonthLabel(constraints),
-                        Expanded(
-                          child: Container(
-                            alignment: Alignment.bottomRight,
-                            child: DropdownButton<GanttMode>(
-                              items: GanttMode.values.map((mode) {
-                                return DropdownMenuItem(
-                                  value: mode,
-                                  child: Text(mode.name),
-                                );
-                              }).toList(),
-                              value: ganttMode,
-                              onChanged: (value) =>
-                                  {if (value != null) changeGanttMode(value)},
+                        Row(
+                          children: [
+                            // Date label for Years & month
+                            _buildYearMonthLabel(constraints),
+                            Expanded(
+                              child: Container(
+                                alignment: Alignment.bottomRight,
+                                child: DropdownButton<GanttMode>(
+                                  items: GanttMode.values.map((mode) {
+                                    return DropdownMenuItem(
+                                      value: mode,
+                                      child: Text(mode.name),
+                                    );
+                                  }).toList(),
+                                  value: ganttMode,
+                                  onChanged: (value) => {
+                                    if (value != null) changeGanttMode(value)
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
+
+                        // Draw all gant chart here
+                        _buildMainGanttChart(
+                          constraints,
+                          realChartHeight,
+                          maxChartWidth,
+                          dayLabelHeight,
+                          firstStartDate,
                         ),
                       ],
                     ),
-
-                    // Draw all gant chart here
-                    _buildMainGanttChart(
-                      constraints,
-                      realChartHeight,
-                      maxChartWidth,
-                      dayLabelHeight,
-                      firstStartDate,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                  );
+                }),
+          ],
         ),
       );
     });
   }
 
-  SizedBox _buildTaskLabel(
+  Widget _buildTaskLabel(
     BoxConstraints constraints,
     double realChartHeight,
   ) {
-    return SizedBox(
-      width: widget.labelWidth,
-      height: realChartHeight > constraints.maxHeight - widget.heightPerRow
-          ? constraints.maxHeight
-          : realChartHeight + widget.heightPerRow,
-      child: Column(
-        children: [
-          SizedBox(
-            height: widget.heightPerRow * 1.5,
-            child: Center(
-              child: Text(widget.labelText, style: widget.headerLabelStyle),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: widget.tableOuterColor),
-                  top: BorderSide(color: widget.tableOuterColor),
-                ),
-              ),
-              child: ListView.builder(
-                controller: labelScrollController,
-                itemCount: widget.data.length,
-                itemBuilder: (context, index) {
-                  final data = widget.data[index];
+    return ValueListenableBuilder(
+        valueListenable: labelWidth,
+        builder: (context, labelWidthValue, _) {
+          return Stack(
+            children: [
+              SizedBox(
+                width: labelWidthValue,
+                height: realChartHeight >
+                        constraints.maxHeight - widget.heightPerRow
+                    ? constraints.maxHeight
+                    : realChartHeight + widget.heightPerRow,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: widget.heightPerRow * 1.5,
+                      child: Center(
+                        child: Text(widget.labelText,
+                            style: widget.headerLabelStyle),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: widget.tableOuterColor),
+                            top: BorderSide(color: widget.tableOuterColor),
+                          ),
+                        ),
+                        child: ListView.builder(
+                          controller: labelScrollController,
+                          itemCount: widget.data.length,
+                          itemBuilder: (context, index) {
+                            final data = widget.data[index];
 
-                  if (widget.taskLabelBuilder != null) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: widget.tableOuterColor),
-                          left: BorderSide(color: widget.tableOuterColor),
+                            if (widget.taskLabelBuilder != null) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                        color: widget.tableOuterColor),
+                                    left: BorderSide(
+                                        color: widget.tableOuterColor),
+                                  ),
+                                ),
+                                height: widget.data[index]
+                                    .getBarHeight(widget.heightPerRow),
+                                child:
+                                    widget.taskLabelBuilder!(data.label, index),
+                              );
+                            }
+
+                            return SizedBox(
+                              height: widget.data[index]
+                                  .getBarHeight(widget.heightPerRow),
+                              child: Center(
+                                child: Text(data.label),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      height:
-                          widget.data[index].getBarHeight(widget.heightPerRow),
-                      child: widget.taskLabelBuilder!(data.label, index),
-                    );
-                  }
-
-                  return SizedBox(
-                    height:
-                        widget.data[index].getBarHeight(widget.heightPerRow),
-                    child: Center(
-                      child: Text(data.label),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+
+              // Widget to resize the label section
+              Positioned(
+                right: 0,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    final newWidth = labelWidth.value + details.delta.dx;
+                    if (newWidth > 50 && newWidth < constraints.maxWidth / 2) {
+                      labelWidth.value = newWidth;
+                    }
+                  },
+                  child: Container(
+                    height: realChartHeight >
+                            constraints.maxHeight - widget.heightPerRow
+                        ? constraints.maxHeight
+                        : realChartHeight + widget.heightPerRow,
+                    width: 12,
+                    color: Colors.transparent,
+                  ),
+                ),
+              ),
+            ],
+          );
+        });
   }
 
   Container _buildMainGanttChart(
@@ -491,7 +532,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     }
 
     return Container(
-      width: constraints.maxWidth - widget.labelWidth,
+      width: constraints.maxWidth - labelWidth.value,
       height: realChartHeight > constraints.maxHeight - widget.heightPerRow
           ? constraints.maxHeight - widget.heightPerRow
           : realChartHeight,
@@ -532,18 +573,29 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                         ValueListenableBuilder(
                             valueListenable: arrowState,
                             builder: (context, _, __) {
-                              return Column(
-                                children: [
-                                  ...generateArrows(
-                                    widget.data,
-                                    widthPerDay: widthPerDay,
-                                    heightPerRow: widget.heightPerRow,
-                                    firstDateShown: firstStartDate,
-                                    indicatorWidth: widget.dragIndicatorWidth,
-                                    arrowColor: widget.arrowColor,
-                                    arrowSize: widget.arrowSize,
+                              return SizedBox(
+                                height: realChartHeight >
+                                        constraints.maxHeight -
+                                            widget.heightPerRow
+                                    ? constraints.maxHeight
+                                    : realChartHeight + widget.heightPerRow,
+                                child: SingleChildScrollView(
+                                  controller: arrowsScrollController,
+                                  child: Column(
+                                    children: [
+                                      ...generateArrows(
+                                        widget.data,
+                                        widthPerDay: widthPerDay,
+                                        heightPerRow: widget.heightPerRow,
+                                        firstDateShown: firstStartDate,
+                                        indicatorWidth:
+                                            widget.dragIndicatorWidth,
+                                        arrowColor: widget.arrowColor,
+                                        arrowSize: widget.arrowSize,
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               );
                             }),
                         ListView.builder(
