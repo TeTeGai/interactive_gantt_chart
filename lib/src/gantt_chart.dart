@@ -581,19 +581,24 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     : realChartHeight + widget.heightPerRow,
                                 child: SingleChildScrollView(
                                   controller: arrowsScrollController,
-                                  child: Column(
-                                    children: [
-                                      ...generateArrows(
-                                        widget.data,
-                                        widthPerDay: widthPerDay,
-                                        heightPerRow: widget.heightPerRow,
-                                        firstDateShown: firstStartDate,
-                                        indicatorWidth:
-                                            widget.dragIndicatorWidth,
-                                        arrowColor: widget.arrowColor,
-                                        arrowSize: widget.arrowSize,
-                                      ),
-                                    ],
+                                  child: SizedBox(
+                                    width: maxChartWidth,
+                                    height: realChartHeight,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        ...generateArrows(
+                                          widget.data,
+                                          widthPerDay: widthPerDay,
+                                          heightPerRow: widget.heightPerRow,
+                                          firstDateShown: firstStartDate,
+                                          indicatorWidth:
+                                              widget.dragIndicatorWidth,
+                                          arrowColor: widget.arrowColor,
+                                          arrowSize: widget.arrowSize,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );

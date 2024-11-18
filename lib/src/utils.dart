@@ -68,7 +68,6 @@ List<Widget> generateArrows(
               arrowColor: arrowColor,
               arrowSize: arrowSize,
             ),
-            size: Size.infinite,
           ),
         );
       }

@@ -59,4 +59,5 @@
 
 * Add optional snap drag to date (default to true)
 * Add feature to resize label width
-* Fix some bugs on displayed arrow dependencies 
+* Fix some bugs on displayed arrow dependencies
+* Change drag indicator default style
