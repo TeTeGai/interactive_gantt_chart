@@ -2,7 +2,7 @@ class DummyData {
   static List<Task> get data {
     int counter = 0;
 
-    return List.generate(5, (index) {
+    return List.generate(50, (index) {
       if (index % 2 == 0 && index != 0) {
         counter++;
       }

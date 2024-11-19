@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:interactive_gantt_chart/src/arrow_connector.dart';
 import 'package:interactive_gantt_chart/src/gantt_data.dart';
 import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:interactive_gantt_chart/src/utils.dart';
@@ -54,6 +55,7 @@ class GanttChart<T, S> extends StatefulWidget {
   final Color tableOuterColor;
   final Color arrowColor;
   final double arrowSize;
+  final double arrowConnectorSize;
 
   /// Enable the magnet drag feature
   /// If enabled, the draggable bar & indicator will snap to the nearest date
@@ -128,6 +130,7 @@ class GanttChart<T, S> extends StatefulWidget {
     this.arrowColor = Colors.blue,
     this.arrowSize = 6,
     this.enableMagnetDrag = true,
+    this.arrowConnectorSize = 12,
   });
 
   @override
@@ -139,20 +142,20 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   late ScrollController labelScrollController;
   late ScrollController chartScrollController;
   late ScrollController arrowsScrollController;
+  late double widthPerDay;
+  late GanttMode ganttMode;
   final chartHorizontalScrollController = ScrollController();
   final dateLabel = ValueNotifier(DateTime.now());
   final selectedTaskIndex = ValueNotifier<int>(0);
   final arrowState = ValueNotifier(false);
-  late double widthPerDay;
-  late GanttMode ganttMode;
   final labelWidth = ValueNotifier(0.0);
+  final isArrowConnecting = ValueNotifier(false);
 
   @override
   void initState() {
-    labelWidth.value = widget.initialLabelWidth;
-    // init width per day value
+    // init any necessary value
     changeGanttMode(widget.ganttMode);
-
+    labelWidth.value = widget.initialLabelWidth;
     labelScrollController = linkedScrollController.addAndGet();
     chartScrollController = linkedScrollController.addAndGet();
     arrowsScrollController = linkedScrollController.addAndGet();
@@ -246,21 +249,22 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
           },
         );
 
-    return LayoutBuilder(builder: (context, constraints) {
-      return SizedBox(
-        height: constraints.maxHeight,
-        width: constraints.maxWidth,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left side (Task label Section)
-            _buildTaskLabel(
-              constraints,
-              realChartHeight,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          height: constraints.maxHeight,
+          width: constraints.maxWidth,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left side (Task label Section)
+              _buildTaskLabel(
+                constraints,
+                realChartHeight,
+              ),
 
-            // Right side
-            ValueListenableBuilder(
+              // Right side
+              ValueListenableBuilder(
                 valueListenable: labelWidth,
                 builder: (context, labelWidthValue, _) {
                   return SizedBox(
@@ -302,11 +306,13 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       ],
                     ),
                   );
-                }),
-          ],
-        ),
-      );
-    });
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildTaskLabel(
@@ -539,122 +545,174 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       decoration: BoxDecoration(
         border: Border.all(color: widget.tableOuterColor),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        controller: chartHorizontalScrollController,
-        child: Stack(
-          children: [
-            // Vertical line for days
-            for (int i = 0; i < maxChartWidth / widthPerDay; i++)
-              Positioned(
-                left: i * widthPerDay,
-                child: Container(
-                  height: (realChartHeight),
-                  width: 1,
-                  color: (ganttMode == GanttMode.daily)
-                      ? widget.gridLineColor
-                      : widget.gridLineColor.withOpacity(0.5),
-                ),
-              ),
-
-            // Additional vertical line for each week or month
-            ...verticalGuideLines,
-
-            SizedBox(
-              width: maxChartWidth,
-              child: Column(
+      child: ValueListenableBuilder(
+          valueListenable: isArrowConnecting,
+          builder: (context, isArrowConnectingState, _) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: chartHorizontalScrollController,
+              physics: isArrowConnectingState
+                  ? const NeverScrollableScrollPhysics()
+                  : const AlwaysScrollableScrollPhysics(),
+              child: Stack(
                 children: [
-                  Row(
-                    children: labelWidgets,
-                  ),
-                  Expanded(
-                    child: Stack(
+                  // Vertical line for days
+                  for (int i = 0; i < maxChartWidth / widthPerDay; i++)
+                    Positioned(
+                      left: i * widthPerDay,
+                      child: Container(
+                        height: (realChartHeight),
+                        width: 1,
+                        color: (ganttMode == GanttMode.daily)
+                            ? widget.gridLineColor
+                            : widget.gridLineColor.withOpacity(0.5),
+                      ),
+                    ),
+
+                  // Additional vertical line for each week or month
+                  ...verticalGuideLines,
+
+                  SizedBox(
+                    width: maxChartWidth,
+                    child: Column(
                       children: [
-                        ValueListenableBuilder(
-                            valueListenable: arrowState,
-                            builder: (context, _, __) {
-                              return SizedBox(
-                                height: realChartHeight >
-                                        constraints.maxHeight -
-                                            widget.heightPerRow
-                                    ? constraints.maxHeight
-                                    : realChartHeight + widget.heightPerRow,
-                                child: SingleChildScrollView(
-                                  controller: arrowsScrollController,
-                                  child: SizedBox(
-                                    width: maxChartWidth,
-                                    height: realChartHeight,
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        ...generateArrows(
-                                          widget.data,
-                                          widthPerDay: widthPerDay,
-                                          heightPerRow: widget.heightPerRow,
-                                          firstDateShown: firstStartDate,
-                                          indicatorWidth:
-                                              widget.dragIndicatorWidth,
-                                          arrowColor: widget.arrowColor,
-                                          arrowSize: widget.arrowSize,
-                                        ),
-                                      ],
+                        Row(
+                          children: labelWidgets,
+                        ),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              // All Arrows Dependencies and Connector section
+                              ValueListenableBuilder(
+                                valueListenable: arrowState,
+                                builder: (context, _, __) {
+                                  return SizedBox(
+                                    height: realChartHeight >
+                                            constraints.maxHeight -
+                                                widget.heightPerRow
+                                        ? constraints.maxHeight
+                                        : realChartHeight + widget.heightPerRow,
+                                    child: ValueListenableBuilder(
+                                      valueListenable: isArrowConnecting,
+                                      builder:
+                                          (context, isArrowConnectingState, _) {
+                                        return SingleChildScrollView(
+                                          controller: arrowsScrollController,
+                                          physics: isArrowConnectingState
+                                              ? const NeverScrollableScrollPhysics()
+                                              : const AlwaysScrollableScrollPhysics(),
+                                          child: SizedBox(
+                                            width: maxChartWidth,
+                                            height: realChartHeight -
+                                                widget.heightPerRow / 2,
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                ...generateArrows(
+                                                  widget.data,
+                                                  widthPerDay: widthPerDay,
+                                                  heightPerRow:
+                                                      widget.heightPerRow,
+                                                  firstDateShown:
+                                                      firstStartDate,
+                                                  indicatorWidth:
+                                                      widget.dragIndicatorWidth,
+                                                  arrowColor: widget.arrowColor,
+                                                  arrowSize: widget.arrowSize,
+                                                  selectedIndex:
+                                                      selectedTaskIndex.value,
+                                                  connectorSize:
+                                                      widget.arrowConnectorSize,
+                                                  arrowConnector:
+                                                      ArrowConnector(
+                                                    size: widget
+                                                        .arrowConnectorSize,
+                                                    onDragStart: () {
+                                                      isArrowConnecting.value =
+                                                          true;
+                                                    },
+                                                    onDragEnd: () {
+                                                      isArrowConnecting.value =
+                                                          false;
+                                                    },
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ),
-                                ),
-                              );
-                            }),
-                        ListView.builder(
-                          controller: chartScrollController,
-                          itemCount: widget.data.length,
-                          itemBuilder: (context, index) {
-                            final data = widget.data[index];
-                            final duration =
-                                data.dateEnd.difference(data.dateStart).inDays +
-                                    1;
-                            final width = duration * widthPerDay;
-                            final startDistance = ValueNotifier(data.dateStart
-                                    .difference(firstStartDate)
-                                    .inDays *
-                                widthPerDay);
+                                  );
+                                },
+                              ),
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  height: widget.heightPerRow,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      buildMainDataBar(
-                                        index,
-                                        startDistance,
-                                        data,
-                                        width,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              ValueListenableBuilder(
+                                valueListenable: isArrowConnecting,
+                                builder: (context, isArrowConnectingState, _) {
+                                  return ListView.builder(
+                                    hitTestBehavior:
+                                        HitTestBehavior.deferToChild,
+                                    controller: chartScrollController,
+                                    physics: isArrowConnectingState
+                                        ? const NeverScrollableScrollPhysics()
+                                        : const AlwaysScrollableScrollPhysics(),
+                                    itemCount: widget.data.length,
+                                    itemBuilder: (context, index) {
+                                      final data = widget.data[index];
+                                      final duration = data.dateEnd
+                                              .difference(data.dateStart)
+                                              .inDays +
+                                          1;
+                                      final width = duration * widthPerDay;
+                                      final startDistance = ValueNotifier(data
+                                              .dateStart
+                                              .difference(firstStartDate)
+                                              .inDays *
+                                          widthPerDay);
 
-                                // Render sub data
-                                buildSubData(
-                                  data,
-                                  firstStartDate,
-                                  index,
-                                  constraints,
-                                ),
-                              ],
-                            );
-                          },
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          SizedBox(
+                                            height: widget.heightPerRow,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                buildMainDataBar(
+                                                  index,
+                                                  startDistance,
+                                                  data,
+                                                  width,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Render sub data
+                                          buildSubData(
+                                            data,
+                                            firstStartDate,
+                                            index,
+                                            constraints,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
+            );
+          }),
     );
   }
 
@@ -666,8 +724,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   ) {
     return ValueListenableBuilder(
       valueListenable: selectedTaskIndex,
-      builder: (context, selectedIndex, _) {
-        final isSelected = selectedIndex == index;
+      builder: (context, selectedTaskIndexValue, _) {
+        final isSelected = selectedTaskIndexValue == index;
 
         // variable for storing bar current distance from the start
         // Fixed value for calculating the new date while dragging
@@ -760,6 +818,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     return SizedBox(
       height: widget.heightPerRow * data.subData.length,
       child: ListView.builder(
+        hitTestBehavior: HitTestBehavior.deferToChild,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: data.subData.length,
         itemBuilder: (_, subIndex) {
@@ -782,7 +841,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             valueListenable: selectedTaskIndex,
             builder: (context, selectedIndex, _) {
               final isSelected =
-                  selectedIndex == int.parse('${index + 1}0${subIndex + 1}');
+                  selectedIndex == GanttSubData.getUniqueIndex(index, subIndex);
 
               // To notify the indicator that the parent is dragging
               final isDragging = ValueNotifier(false);
@@ -809,8 +868,14 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                               duration: widget.animationDuration,
                               left: startDistanceValue,
                               child: GestureDetector(
-                                onTap: () => selectedTaskIndex.value =
-                                    int.parse('${index + 1}0${subIndex + 1}'),
+                                onTap: () {
+                                  selectedTaskIndex.value =
+                                      GanttSubData.getUniqueIndex(
+                                          index, subIndex);
+
+                                  // trigger arrow refresh
+                                  arrowState.value = !arrowState.value;
+                                },
                                 onHorizontalDragEnd: !isSelected
                                     ? null
                                     : (details) {
@@ -928,6 +993,20 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       isIndicatorDragging: isIndicatorDragging,
                       barWidth: width,
                     ),
+
+                    // Positioned(
+                    //     left: isSelected
+                    //         ? distanceFromStart - 14 * 2
+                    //         : distanceFromStart - 12,
+                    //     child: ArrowConnector(
+                    //       onDragStart: () {
+                    //         isArrowConnecting.value = true;
+                    //       },
+                    //       onDragEnd: () {
+                    //         isArrowConnecting.value = false;
+                    //       },
+                    //     ),
+                    // ),
                   ],
                 ),
               );

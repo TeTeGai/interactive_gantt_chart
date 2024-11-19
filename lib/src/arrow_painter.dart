@@ -17,6 +17,7 @@ class ArrowPainter extends CustomPainter {
   final double arrowSize;
   final DateTime firstDateShown;
   final Color arrowColor;
+  final bool isSelected;
 
   const ArrowPainter({
     required this.dependentSubData,
@@ -29,6 +30,7 @@ class ArrowPainter extends CustomPainter {
     required this.arrowSize,
     required this.firstDateShown,
     required this.arrowColor,
+    this.isSelected = false,
   });
 
   @override
@@ -37,8 +39,12 @@ class ArrowPainter extends CustomPainter {
         (dependentSubData.dateEnd.difference(firstDateShown).inDays + 1) *
             widthPerDay;
     final startY = dependentIndex * heightPerRow + heightPerRow / 2;
-    final endX = pointedSubData.dateStart.difference(firstDateShown).inDays *
-        widthPerDay;
+    final endX = isSelected
+        ? pointedSubData.dateStart.difference(firstDateShown).inDays *
+                widthPerDay -
+            indicatorWidth * 1.5
+        : pointedSubData.dateStart.difference(firstDateShown).inDays *
+            widthPerDay;
     final endY = pointedIndex * heightPerRow + heightPerRow / 2;
 
     final midPointX = (startX + endX) / 2;

@@ -84,8 +84,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
+                    gridLineColor: Colors.grey.withOpacity(0.5),
+                    tableOuterColor: Colors.grey.withOpacity(0.8),
                     dayLabelStyle: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                     taskLabelBuilder: (data, index) {
                       return Container(
                         alignment: Alignment.center,

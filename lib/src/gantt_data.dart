@@ -116,4 +116,8 @@ class GanttSubData<T> {
       dependencies: dependencies ?? this.dependencies,
     );
   }
+
+  static int getUniqueIndex(int parentIndex, int subIndex) {
+    return int.parse('${parentIndex + 1}0${subIndex + 1}');
+  }
 }

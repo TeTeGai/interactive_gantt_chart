@@ -29,6 +29,7 @@ void moveEntireBar({
   onNewDistance(newDistanceInDays, newStartDistance);
 }
 
+/// For now also generate arrows connector to avoid too much nested loop
 List<Widget> generateArrows(
   List<GanttData> listData, {
   required double widthPerDay,
@@ -37,13 +38,34 @@ List<Widget> generateArrows(
   required double indicatorWidth,
   required Color arrowColor,
   required double arrowSize,
+  required int selectedIndex,
+  required Widget arrowConnector,
+  required double connectorSize,
 }) {
   final arrows = <Widget>[];
-// int pointedIndex = 0;
+  final arrowsConnector = <Widget>[];
   for (GanttData data in listData) {
-// pointedIndex++;
+    final parentIndex = listData.indexOf(data);
     for (GanttSubData subData in data.subData) {
-// pointedIndex++;
+      // Generate arrows connector for each subData
+      final subIndex = data.subData.indexOf(subData);
+      final isSelected =
+          selectedIndex == GanttSubData.getUniqueIndex(parentIndex, subIndex);
+      final distanceFromStart =
+          subData.dateStart.difference(firstDateShown).inDays * widthPerDay;
+      arrowsConnector.add(
+        Positioned(
+          left: isSelected
+              ? distanceFromStart - connectorSize * 2.5
+              : distanceFromStart - connectorSize - 1,
+          top: subData.getIndexFromEntireData(listData) * heightPerRow +
+              heightPerRow / 2 -
+              connectorSize / 2,
+          child: arrowConnector,
+        ),
+      );
+
+      // Generate arrows for each subData dependencies
       for (String dependency in subData.dependencies) {
         final dependentSubData =
             subData.getDependencies(data.subData).firstWhere(
@@ -67,6 +89,7 @@ List<Widget> generateArrows(
               firstDateShown: firstDateShown,
               arrowColor: arrowColor,
               arrowSize: arrowSize,
+              isSelected: isSelected,
             ),
           ),
         );
@@ -74,5 +97,6 @@ List<Widget> generateArrows(
     }
   }
 
+  arrows.addAll(arrowsConnector);
   return arrows;
 }
