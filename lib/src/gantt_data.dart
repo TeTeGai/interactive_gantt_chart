@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Wrapper Class to be rendered in the Gantt chart
 /// [T] is for the main data type
 /// [S] is for the sub data type
@@ -39,12 +41,8 @@ class GanttData<T, S> {
   /// Method to update start & end date based on the subData
   void calculateMainDate() {
     if (subData.isEmpty) return;
-    dateStart = subData
-        .map((e) => e.dateStart)
-        .reduce((value, element) => value.isBefore(element) ? value : element);
-    dateEnd = subData
-        .map((e) => e.dateEnd)
-        .reduce((value, element) => value.isAfter(element) ? value : element);
+    dateStart = subData.map((e) => e.dateStart).reduce((value, element) => value.isBefore(element) ? value : element);
+    dateEnd = subData.map((e) => e.dateEnd).reduce((value, element) => value.isAfter(element) ? value : element);
   }
 
   /// Method to update all subData based on the main date
@@ -68,7 +66,7 @@ class GanttSubData<T> {
   final T data;
   final String label;
   final String id; // Unique identifier for each GanttSubData
-  final List<String> dependencies; // List of IDs of dependent GanttSubData
+  List<String> dependencies; // List of IDs of dependent GanttSubData
 
   GanttSubData({
     required this.dateStart,
@@ -76,8 +74,8 @@ class GanttSubData<T> {
     required this.data,
     required this.label,
     required this.id,
-    this.dependencies = const [],
-  });
+    List<String>? dependencies,
+  }) : dependencies = dependencies ?? [];
 
   List<GanttSubData<T>> getDependencies(List<GanttSubData<T>> subData) {
     return subData.where((element) {
@@ -117,7 +115,20 @@ class GanttSubData<T> {
     );
   }
 
+  /// Mainly used for generating selected index in the GanttChart,
+  /// and not meant to be used outside of the GanttChart packages.
   static int getUniqueIndex(int parentIndex, int subIndex) {
     return int.parse('${parentIndex + 1}0${subIndex + 1}');
+  }
+
+  static String generateId() {
+    final milliseconds = DateTime.now().millisecondsSinceEpoch;
+    final randomNumber = Random().nextInt(1000);
+    final randomNumber2 = Random().nextInt(1000);
+    return '$randomNumber2$milliseconds$randomNumber';
+  }
+
+  void addDependency(String id) {
+    dependencies.add(id);
   }
 }

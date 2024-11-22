@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/src/arrow_connector.dart';
 import 'package:interactive_gantt_chart/src/gantt_data.dart';
 import 'package:interactive_gantt_chart/src/gantt_mode.dart';
-import 'package:interactive_gantt_chart/src/utils.dart';
+import 'package:interactive_gantt_chart/src/utils/gantt_utils.dart';
 import 'package:intl/intl.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
@@ -623,19 +623,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                       selectedTaskIndex.value,
                                                   connectorSize:
                                                       widget.arrowConnectorSize,
-                                                  arrowConnector:
-                                                      ArrowConnector(
-                                                    size: widget
-                                                        .arrowConnectorSize,
-                                                    onDragStart: () {
-                                                      isArrowConnecting.value =
-                                                          true;
-                                                    },
-                                                    onDragEnd: () {
-                                                      isArrowConnecting.value =
-                                                          false;
-                                                    },
-                                                  ),
+                                                  isArrowConnecting: isArrowConnecting,
+                                                  onArrowConnected: () => setState(() {}),
                                                 ),
                                               ],
                                             ),

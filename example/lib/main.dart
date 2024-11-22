@@ -39,19 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
       label: task.name,
       subData: [
         GanttSubData(
-          id: '${task.name}sub1',
+          id: GanttSubData.generateId(),
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
           label: 'Sub ${task.name} 1',
         ),
         GanttSubData(
-          id: '${task.name}sub2',
+          id: GanttSubData.generateId(),
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
           label: 'Sub ${task.name} 2',
-          dependencies: ['${task.name}sub1'],
         ),
       ],
     );
@@ -59,16 +58,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    ganttData[0].subData.add(
+    final firstData = ganttData.first;
+    firstData.subData.add(
           GanttSubData<String>(
-            id: 'sub3',
+            id: GanttSubData.generateId(),
             dateStart: ganttData[0].data.start,
             dateEnd: ganttData[0].data.end,
             data: ganttData[0].label,
             label: ganttData[0].data.name,
-            dependencies: ['${ganttData.first.data.name}sub1'],
           ),
         );
+    // firstData.subData[1].addDependency(firstData.subData[0].id);
+    // firstData.subData[2].addDependency(firstData.subData[0].id);
     super.initState();
   }
 

@@ -30,15 +30,27 @@ class ArrowConnectorPainter extends CustomPainter {
 }
 
 class ArrowConnector extends StatefulWidget {
-  final Function() onDragStart;
-  final Function() onDragEnd;
+  final void Function() onDragStart;
+  final void Function(int targetIndex, DateTime targetDate) onDragEnd;
   final double size;
+  final double heightPerRow;
+  final double widthPerDay;
+  final int originIndex;
+  final DateTime originDateStart;
+  final DateTime originDateEnd;
+  final bool isStart;
 
   const ArrowConnector({
     super.key,
     required this.onDragStart,
     required this.onDragEnd,
     required this.size,
+    required this.heightPerRow,
+    required this.widthPerDay,
+    required this.originIndex,
+    required this.originDateStart,
+    required this.originDateEnd,
+    this.isStart = true,
   });
 
   @override
@@ -73,7 +85,20 @@ class _ArrowConnectorState extends State<ArrowConnector> {
         });
       },
       onPanEnd: (details) {
-        widget.onDragEnd();
+        final verticalPosition = details.localPosition.dy;
+        final targetY = widget.originIndex + (verticalPosition / widget.heightPerRow);
+        final targetX = currentPoint.dx / widget.widthPerDay;
+
+        final targetIndex = targetY.floor();
+        late DateTime targetDate;
+
+        if (widget.isStart) {
+          targetDate = widget.originDateStart.add(Duration(days: targetX.floor()));
+        } else {
+          targetDate = widget.originDateEnd.add(Duration(days: targetX.floor()));
+        }
+
+        widget.onDragEnd(targetIndex, targetDate);
         setState(() {
           currentPoint = Offset(widget.size / 2, widget.size / 2);
         });
