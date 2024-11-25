@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/interactive_gantt_chart.dart';
+import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:interactive_gantt_chart/src/utils/date_utils.dart';
 
 import '../arrow_connector.dart';
@@ -41,7 +42,9 @@ List<Widget> generateArrows(
   required int selectedIndex,
   required double connectorSize,
   required ValueNotifier<bool> isArrowConnecting,
+  required GanttMode mode,
   required void Function() onArrowConnected,
+  required void Function() onArrowStartConnecting,
 }) {
   final arrows = <Widget>[];
   final arrowsConnector = <Widget>[];
@@ -67,13 +70,19 @@ List<Widget> generateArrows(
             originDateEnd: subData.dateEnd,
             onDragStart: () {
               isArrowConnecting.value = true;
+              onArrowStartConnecting();
             },
             onDragEnd: (targetIndex, targetDate) {
               try {
                 isArrowConnecting.value = false;
-                // Todo: fix how to determined whether the targetDate in range or not
-                // Currently still not quite accurate
-                if (isTargetInRange(targetDate, subData.dateStart) && targetIndex != subIndex) {
+                final targetData = listData[parentIndex].subData[targetIndex];
+                final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
+                if (isTargetInRange(
+                      targetDate,
+                      targetData.dateStart.subtract(const Duration(days: 1)),
+                      rangeInDays: rangeInDays,
+                    ) &&
+                    targetIndex != subIndex) {
                   listData[parentIndex].subData[targetIndex].addDependency(subData.id);
                 }
                 onArrowConnected();
@@ -91,7 +100,7 @@ List<Widget> generateArrows(
         try {
           final dependentSubData = subData.getDependencies(data.subData).firstWhere(
                 (element) => element.id == dependency,
-          );
+              );
           final pointedSubData = subData;
           final dependentIndex = dependentSubData.getIndexFromEntireData(listData);
           final pointedIndex = pointedSubData.getIndexFromEntireData(listData);
