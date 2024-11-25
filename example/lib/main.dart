@@ -39,16 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
       label: task.name,
       subData: [
         GanttSubData(
+          id: GanttSubData.generateId(),
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
-          label: 'Sub ${task.name}',
+          label: 'Sub ${task.name} 1',
         ),
         GanttSubData(
+          id: GanttSubData.generateId(),
           dateStart: task.start.add(const Duration(days: 1)),
           dateEnd: task.end,
           data: 'Sub ${task.name}',
-          label: 'Sub ${task.name}',
+          label: 'Sub ${task.name} 2',
         ),
       ],
     );
@@ -56,14 +58,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    ganttData[0].subData.add(
-          GanttSubData<String>(
-            dateStart: ganttData[0].data.start,
-            dateEnd: ganttData[0].data.end,
-            data: ganttData[0].label,
-            label: ganttData[0].data.name,
-          ),
-        );
+    final firstData = ganttData.first;
+    firstData.subData.add(
+      GanttSubData<String>(
+        id: GanttSubData.generateId(),
+        dateStart: ganttData[0].data.start,
+        dateEnd: ganttData[0].data.end,
+        data: ganttData[0].label,
+        label: ganttData[0].data.name,
+      ),
+    );
+    // firstData.subData[1].addDependency(firstData.subData[0].id);
+    // firstData.subData[2].addDependency(firstData.subData[0].id);
     super.initState();
   }
 
@@ -79,8 +85,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
+                    connectorColor: Colors.deepPurple,
+                    gridLineColor: Colors.grey.withOpacity(0.5),
+                    tableOuterColor: Colors.grey.withOpacity(0.8),
                     dayLabelStyle: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                     taskLabelBuilder: (data, index) {
                       return Container(
                         alignment: Alignment.center,
