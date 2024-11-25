@@ -15,7 +15,8 @@ void moveEntireBar({
   required Function(int distanceInDays, double newStartDistance) onNewDistance,
 }) {
   final rawDistance = (startDistance - distanceFromStart) / widthPerDay;
-  final newDistanceInDays = (deltaDX > 0) ? rawDistance.ceil() : rawDistance.floor();
+  final newDistanceInDays =
+      (deltaDX > 0) ? rawDistance.ceil() : rawDistance.floor();
 
   // distance for current animation
   double newStartDistance = startDistance + deltaDX;
@@ -23,7 +24,8 @@ void moveEntireBar({
     if (newStartDistance % widthPerDay < widthPerDay * 0.5 / 10) {
       newStartDistance = newStartDistance - (newStartDistance % widthPerDay);
     } else if (newStartDistance % widthPerDay > widthPerDay * 9.5 / 10) {
-      newStartDistance = newStartDistance + widthPerDay - (newStartDistance % widthPerDay);
+      newStartDistance =
+          newStartDistance + widthPerDay - (newStartDistance % widthPerDay);
     }
   }
 
@@ -41,6 +43,7 @@ List<Widget> generateArrows(
   required double arrowSize,
   required int selectedIndex,
   required double connectorSize,
+  required Color connectorColor,
   required ValueNotifier<bool> isArrowConnecting,
   required GanttMode mode,
   required void Function() onArrowConnected,
@@ -53,18 +56,25 @@ List<Widget> generateArrows(
     for (GanttSubData subData in data.subData) {
       // Generate arrows connector for each subData
       final subIndex = data.subData.indexOf(subData);
-      final isSelected = selectedIndex == GanttSubData.getUniqueIndex(parentIndex, subIndex);
-      final distanceFromStart = subData.dateStart.difference(firstDateShown).inDays * widthPerDay;
+      final isSelected =
+          selectedIndex == GanttSubData.getUniqueIndex(parentIndex, subIndex);
+      final distanceFromStart =
+          subData.dateStart.difference(firstDateShown).inDays * widthPerDay;
 
       // Start connector
       arrowsConnector.add(
         Positioned(
-          left: isSelected ? distanceFromStart - connectorSize * 2.5 : distanceFromStart - connectorSize - 1,
-          top: subData.getIndexFromEntireData(listData) * heightPerRow + heightPerRow / 2 - connectorSize / 2,
+          left: isSelected
+              ? distanceFromStart - connectorSize * 2.5
+              : distanceFromStart - connectorSize - 1,
+          top: subData.getIndexFromEntireData(listData) * heightPerRow +
+              heightPerRow / 2 -
+              connectorSize / 2,
           child: ArrowConnector(
             widthPerDay: widthPerDay,
             heightPerRow: heightPerRow,
             size: connectorSize,
+            connectorColor: connectorColor,
             originIndex: subIndex,
             originDateStart: subData.dateStart,
             originDateEnd: subData.dateEnd,
@@ -77,13 +87,16 @@ List<Widget> generateArrows(
                 isArrowConnecting.value = false;
                 final targetData = listData[parentIndex].subData[targetIndex];
                 final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
-                if (isTargetInRange(
+                if (isTargetInRangeOfTwoOrigin(
                       targetDate,
                       targetData.dateStart.subtract(const Duration(days: 1)),
+                      targetData.dateEnd,
                       rangeInDays: rangeInDays,
                     ) &&
                     targetIndex != subIndex) {
-                  listData[parentIndex].subData[targetIndex].addDependency(subData.id);
+                  listData[parentIndex]
+                      .subData[targetIndex]
+                      .addDependency(subData.id);
                 }
                 onArrowConnected();
               } catch (e) {
@@ -95,14 +108,67 @@ List<Widget> generateArrows(
         ),
       );
 
+      // End connector
+      arrowsConnector.add(
+        Positioned(
+          left: isSelected
+              ? (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                      widthPerDay +
+                  connectorSize * 1.5
+              : (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                      widthPerDay +
+                  1,
+          top: subData.getIndexFromEntireData(listData) * heightPerRow +
+              heightPerRow / 2 -
+              connectorSize / 2,
+          child: ArrowConnector(
+            widthPerDay: widthPerDay,
+            heightPerRow: heightPerRow,
+            size: connectorSize,
+            connectorColor: connectorColor,
+            originIndex: subIndex,
+            originDateStart: subData.dateStart,
+            originDateEnd: subData.dateEnd,
+            isStart: false,
+            onDragStart: () {
+              isArrowConnecting.value = true;
+              onArrowStartConnecting();
+            },
+            onDragEnd: (targetIndex, targetDate) {
+              try {
+                isArrowConnecting.value = false;
+                final targetData = listData[parentIndex].subData[targetIndex];
+                final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
+                if (isTargetInRangeOfTwoOrigin(
+                      targetDate,
+                      targetData.dateStart.subtract(const Duration(days: 1)),
+                      targetData.dateEnd,
+                      rangeInDays: rangeInDays,
+                    ) &&
+                    targetIndex != subIndex) {
+                  listData[parentIndex]
+                      .subData[targetIndex]
+                      .addDependency(subData.id);
+                }
+                onArrowConnected();
+              } catch (e) {
+                print('Error: $e');
+              }
+            },
+          ),
+        ),
+      );
+
       // Generate arrows for each subData dependencies
       for (String dependency in subData.dependencies) {
         try {
-          final dependentSubData = subData.getDependencies(data.subData).firstWhere(
-                (element) => element.id == dependency,
-              );
+          final dependentSubData =
+              subData.getDependencies(data.subData).firstWhere(
+                    (element) => element.id == dependency,
+                  );
           final pointedSubData = subData;
-          final dependentIndex = dependentSubData.getIndexFromEntireData(listData);
+          final dependentIndex =
+              dependentSubData.getIndexFromEntireData(listData);
           final pointedIndex = pointedSubData.getIndexFromEntireData(listData);
 
           arrows.add(

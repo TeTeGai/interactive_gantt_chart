@@ -41,8 +41,12 @@ class GanttData<T, S> {
   /// Method to update start & end date based on the subData
   void calculateMainDate() {
     if (subData.isEmpty) return;
-    dateStart = subData.map((e) => e.dateStart).reduce((value, element) => value.isBefore(element) ? value : element);
-    dateEnd = subData.map((e) => e.dateEnd).reduce((value, element) => value.isAfter(element) ? value : element);
+    dateStart = subData
+        .map((e) => e.dateStart)
+        .reduce((value, element) => value.isBefore(element) ? value : element);
+    dateEnd = subData
+        .map((e) => e.dateEnd)
+        .reduce((value, element) => value.isAfter(element) ? value : element);
   }
 
   /// Method to update all subData based on the main date

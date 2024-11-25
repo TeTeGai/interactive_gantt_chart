@@ -4,17 +4,19 @@ class ArrowConnectorPainter extends CustomPainter {
   Offset initialPoint;
   Offset currentPoint;
   final double connectorSize;
+  final Color connectorColor;
 
   ArrowConnectorPainter({
     required this.currentPoint,
     required this.initialPoint,
     required this.connectorSize,
+    required this.connectorColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.red
+      ..color = connectorColor
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
@@ -33,6 +35,7 @@ class ArrowConnector extends StatefulWidget {
   final void Function() onDragStart;
   final void Function(int targetIndex, DateTime targetDate) onDragEnd;
   final double size;
+  final Color connectorColor;
   final double heightPerRow;
   final double widthPerDay;
   final int originIndex;
@@ -45,6 +48,7 @@ class ArrowConnector extends StatefulWidget {
     required this.onDragStart,
     required this.onDragEnd,
     required this.size,
+    required this.connectorColor,
     required this.heightPerRow,
     required this.widthPerDay,
     required this.originIndex,
@@ -86,16 +90,19 @@ class _ArrowConnectorState extends State<ArrowConnector> {
       },
       onPanEnd: (details) {
         final verticalPosition = details.localPosition.dy;
-        final targetY = widget.originIndex + (verticalPosition / widget.heightPerRow);
+        final targetY =
+            widget.originIndex + (verticalPosition / widget.heightPerRow);
         final targetX = currentPoint.dx / widget.widthPerDay;
 
         final targetIndex = targetY.floor();
         late DateTime targetDate;
 
         if (widget.isStart) {
-          targetDate = widget.originDateStart.add(Duration(days: targetX.floor()));
+          targetDate =
+              widget.originDateStart.add(Duration(days: targetX.floor()));
         } else {
-          targetDate = widget.originDateEnd.add(Duration(days: targetX.floor()));
+          targetDate =
+              widget.originDateEnd.add(Duration(days: targetX.floor()));
         }
 
         widget.onDragEnd(targetIndex, targetDate);
@@ -108,13 +115,14 @@ class _ArrowConnectorState extends State<ArrowConnector> {
           initialPoint: Offset(widget.size, widget.size),
           currentPoint: currentPoint,
           connectorSize: widget.size,
+          connectorColor: widget.connectorColor,
         ),
         child: Container(
           width: widget.size,
           height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.red.withOpacity(0.8),
+            color: widget.connectorColor,
           ),
         ),
       ),

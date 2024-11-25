@@ -59,5 +59,6 @@
 
 * Add optional snap drag to date (default to true)
 * Add feature to resize label width
+* Task dependencies can be added by user input by dragging the indicator to another task. (Currently only support same parent task)
 * Fix some bugs on displayed arrow dependencies
 * Change drag indicator default style

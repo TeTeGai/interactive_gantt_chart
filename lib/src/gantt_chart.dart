@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:interactive_gantt_chart/src/arrow_connector.dart';
 import 'package:interactive_gantt_chart/src/gantt_data.dart';
 import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:interactive_gantt_chart/src/utils/gantt_utils.dart';
@@ -55,7 +54,8 @@ class GanttChart<T, S> extends StatefulWidget {
   final Color tableOuterColor;
   final Color arrowColor;
   final double arrowSize;
-  final double arrowConnectorSize;
+  final double connectorSize;
+  final Color connectorColor;
 
   /// Enable the magnet drag feature
   /// If enabled, the draggable bar & indicator will snap to the nearest date
@@ -130,7 +130,8 @@ class GanttChart<T, S> extends StatefulWidget {
     this.arrowColor = Colors.blue,
     this.arrowSize = 6,
     this.enableMagnetDrag = true,
-    this.arrowConnectorSize = 12,
+    this.connectorSize = 12,
+    this.connectorColor = Colors.red,
   });
 
   @override
@@ -164,12 +165,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       final firstStartDate = widget.data.fold(
         DateTime.now(),
         (previousValue, element) {
-          return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+          return element.dateStart.isBefore(previousValue)
+              ? element.dateStart
+              : previousValue;
         },
       ).subtract(
         Duration(days: widget.daysBeforeFirstTask),
       );
-      final offsetInDays = (chartHorizontalScrollController.offset / widthPerDay).round();
+      final offsetInDays =
+          (chartHorizontalScrollController.offset / widthPerDay).round();
       final visibleDate = firstStartDate.add(Duration(days: offsetInDays));
       dateLabel.value = visibleDate;
     });
@@ -180,7 +184,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         final firstStartDate = widget.data.fold(
           DateTime.now(),
           (previousValue, element) {
-            return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+            return element.dateStart.isBefore(previousValue)
+                ? element.dateStart
+                : previousValue;
           },
         );
         final offsetInDays = (DateTime.now().difference(firstStartDate).inDays);
@@ -213,7 +219,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       previousValue,
       element,
     ) {
-      return element.dateStart.isBefore(previousValue) ? element.dateStart : previousValue;
+      return element.dateStart.isBefore(previousValue)
+          ? element.dateStart
+          : previousValue;
     }).subtract(
       Duration(days: widget.daysBeforeFirstTask),
     );
@@ -222,10 +230,13 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       previousValue,
       element,
     ) {
-      return element.dateEnd.isAfter(previousValue) ? element.dateEnd : previousValue;
+      return element.dateEnd.isAfter(previousValue)
+          ? element.dateEnd
+          : previousValue;
     }).add(Duration(days: widget.daysAfterLastTask));
 
-    final maxChartWidth = (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
+    final maxChartWidth =
+        (firstEndDate.difference(firstStartDate).inDays * widthPerDay);
 
     final dayLabelHeight = widget.heightPerRow * 0.5;
 
@@ -276,7 +287,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     );
                                   }).toList(),
                                   value: ganttMode,
-                                  onChanged: (value) => {if (value != null) changeGanttMode(value)},
+                                  onChanged: (value) => {
+                                    if (value != null) changeGanttMode(value)
+                                  },
                                 ),
                               ),
                             ),
@@ -314,7 +327,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             children: [
               SizedBox(
                 width: labelWidthValue,
-                height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+                height: realChartHeight >
+                        constraints.maxHeight - widget.heightPerRow
                     ? constraints.maxHeight
                     : realChartHeight + widget.heightPerRow,
                 child: Column(
@@ -322,7 +336,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     SizedBox(
                       height: widget.heightPerRow * 1.5,
                       child: Center(
-                        child: Text(widget.labelText, style: widget.headerLabelStyle),
+                        child: Text(widget.labelText,
+                            style: widget.headerLabelStyle),
                       ),
                     ),
                     Expanded(
@@ -343,17 +358,22 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                               return Container(
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: widget.tableOuterColor),
-                                    left: BorderSide(color: widget.tableOuterColor),
+                                    bottom: BorderSide(
+                                        color: widget.tableOuterColor),
+                                    left: BorderSide(
+                                        color: widget.tableOuterColor),
                                   ),
                                 ),
-                                height: widget.data[index].getBarHeight(widget.heightPerRow),
-                                child: widget.taskLabelBuilder!(data.label, index),
+                                height: widget.data[index]
+                                    .getBarHeight(widget.heightPerRow),
+                                child:
+                                    widget.taskLabelBuilder!(data.label, index),
                               );
                             }
 
                             return SizedBox(
-                              height: widget.data[index].getBarHeight(widget.heightPerRow),
+                              height: widget.data[index]
+                                  .getBarHeight(widget.heightPerRow),
                               child: Center(
                                 child: Text(data.label),
                               ),
@@ -377,7 +397,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     }
                   },
                   child: Container(
-                    height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+                    height: realChartHeight >
+                            constraints.maxHeight - widget.heightPerRow
                         ? constraints.maxHeight
                         : realChartHeight + widget.heightPerRow,
                     width: 12,
@@ -419,17 +440,25 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
       if (ganttMode == GanttMode.weekly) {
         daysLeftInWeek = 8 - currentDate.weekday;
       } else if (ganttMode == GanttMode.monthly) {
-        daysLeftInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day - currentDate.day + 1;
+        daysLeftInMonth =
+            DateTime(currentDate.year, currentDate.month + 1, 0).day -
+                currentDate.day +
+                1;
       }
 
       // Ensure it doesn't go beyond the chart width
       int daysToShow = ganttMode == GanttMode.weekly
-          ? (i + daysLeftInWeek > maxChartWidth / widthPerDay) // If last week has fewer days
-              ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
+          ? (i + daysLeftInWeek >
+                  maxChartWidth / widthPerDay) // If last week has fewer days
+              ? (maxChartWidth / widthPerDay - i)
+                  .toInt() // Only show remaining days
               : daysLeftInWeek
           : ganttMode == GanttMode.monthly
-              ? (i + daysLeftInMonth > maxChartWidth / widthPerDay) // If last month has fewer days
-                  ? (maxChartWidth / widthPerDay - i).toInt() // Only show remaining days
+              ? (i + daysLeftInMonth >
+                      maxChartWidth /
+                          widthPerDay) // If last month has fewer days
+                  ? (maxChartWidth / widthPerDay - i)
+                      .toInt() // Only show remaining days
                   : daysLeftInMonth
               : 1;
 
@@ -453,7 +482,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         labelWidth = widthPerDay * daysToShow;
       } else if (ganttMode == GanttMode.monthly && isStartOfMonth) {
         // Show month label (e.g., 'Jan 2022') and calculate the dynamic width
-        labelText = '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
+        labelText =
+            '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
         labelWidth = widthPerDay * daysToShow;
       }
 
@@ -473,7 +503,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             decoration: BoxDecoration(
               color: widget.chartBarColor,
               border: Border(
-                right: (ganttMode != GanttMode.daily) ? BorderSide(color: widget.tableOuterColor) : BorderSide.none,
+                right: (ganttMode != GanttMode.daily)
+                    ? BorderSide(color: widget.tableOuterColor)
+                    : BorderSide.none,
                 left: BorderSide(color: widget.tableOuterColor),
                 bottom: BorderSide(color: widget.tableOuterColor),
               ),
@@ -520,7 +552,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               controller: chartHorizontalScrollController,
-              physics: isArrowConnectingState ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+              physics: isArrowConnectingState
+                  ? const NeverScrollableScrollPhysics()
+                  : const AlwaysScrollableScrollPhysics(),
               child: Stack(
                 children: [
                   // Vertical line for days
@@ -530,7 +564,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       child: Container(
                         height: (realChartHeight),
                         width: 1,
-                        color: (ganttMode == GanttMode.daily) ? widget.gridLineColor : widget.gridLineColor.withOpacity(0.5),
+                        color: (ganttMode == GanttMode.daily)
+                            ? widget.gridLineColor
+                            : widget.gridLineColor.withOpacity(0.5),
                       ),
                     ),
 
@@ -552,12 +588,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                 valueListenable: arrowState,
                                 builder: (context, _, __) {
                                   return SizedBox(
-                                    height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+                                    height: realChartHeight >
+                                            constraints.maxHeight -
+                                                widget.heightPerRow
                                         ? constraints.maxHeight
                                         : realChartHeight + widget.heightPerRow,
                                     child: ValueListenableBuilder(
                                       valueListenable: isArrowConnecting,
-                                      builder: (context, isArrowConnectingState, _) {
+                                      builder:
+                                          (context, isArrowConnectingState, _) {
                                         return SingleChildScrollView(
                                           controller: arrowsScrollController,
                                           physics: isArrowConnectingState
@@ -565,28 +604,40 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                               : const AlwaysScrollableScrollPhysics(),
                                           child: SizedBox(
                                             width: maxChartWidth,
-                                            height: realChartHeight - widget.heightPerRow / 2,
+                                            height: realChartHeight -
+                                                widget.heightPerRow / 2,
                                             child: Stack(
                                               clipBehavior: Clip.none,
                                               children: [
                                                 ...generateArrows(
                                                   widget.data,
                                                   widthPerDay: widthPerDay,
-                                                  heightPerRow: widget.heightPerRow,
-                                                  firstDateShown: firstStartDate,
-                                                  indicatorWidth: widget.dragIndicatorWidth,
+                                                  heightPerRow:
+                                                      widget.heightPerRow,
+                                                  firstDateShown:
+                                                      firstStartDate,
+                                                  indicatorWidth:
+                                                      widget.dragIndicatorWidth,
                                                   arrowColor: widget.arrowColor,
                                                   arrowSize: widget.arrowSize,
-                                                  selectedIndex: selectedTaskIndex.value,
-                                                  connectorSize: widget.arrowConnectorSize,
-                                                  isArrowConnecting: isArrowConnecting,
+                                                  selectedIndex:
+                                                      selectedTaskIndex.value,
+                                                  connectorSize:
+                                                      widget.connectorSize,
+                                                  connectorColor:
+                                                      widget.connectorColor,
+                                                  isArrowConnecting:
+                                                      isArrowConnecting,
                                                   mode: ganttMode,
                                                   onArrowStartConnecting: () {
-                                                    selectedTaskIndex.value = -1;
+                                                    selectedTaskIndex.value =
+                                                        -1;
 
-                                                    arrowState.value = !arrowState.value;
+                                                    arrowState.value =
+                                                        !arrowState.value;
                                                   },
-                                                  onArrowConnected: () => setState(() {}),
+                                                  onArrowConnected: () =>
+                                                      setState(() {}),
                                                 ),
                                               ],
                                             ),
@@ -602,7 +653,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                 valueListenable: isArrowConnecting,
                                 builder: (context, isArrowConnectingState, _) {
                                   return ListView.builder(
-                                    hitTestBehavior: HitTestBehavior.deferToChild,
+                                    hitTestBehavior:
+                                        HitTestBehavior.deferToChild,
                                     controller: chartScrollController,
                                     physics: isArrowConnectingState
                                         ? const NeverScrollableScrollPhysics()
@@ -610,13 +662,20 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     itemCount: widget.data.length,
                                     itemBuilder: (context, index) {
                                       final data = widget.data[index];
-                                      final duration = data.dateEnd.difference(data.dateStart).inDays + 1;
+                                      final duration = data.dateEnd
+                                              .difference(data.dateStart)
+                                              .inDays +
+                                          1;
                                       final width = duration * widthPerDay;
-                                      final startDistance =
-                                          ValueNotifier(data.dateStart.difference(firstStartDate).inDays * widthPerDay);
+                                      final startDistance = ValueNotifier(data
+                                              .dateStart
+                                              .difference(firstStartDate)
+                                              .inDays *
+                                          widthPerDay);
 
                                       return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           SizedBox(
                                             height: widget.heightPerRow,
@@ -735,7 +794,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       color: widget.chartBarColor,
                       borderRadius: widget.chartBarBorderRadius,
                       border: Border.all(
-                        color: isSelected ? widget.activeBorderColor : Colors.transparent,
+                        color: isSelected
+                            ? widget.activeBorderColor
+                            : Colors.transparent,
                         width: isSelected ? widget.activeBorderWidth : 0,
                       ),
                     ),
@@ -769,12 +830,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         itemCount: data.subData.length,
         itemBuilder: (_, subIndex) {
           final subData = data.subData[subIndex];
-          final duration = subData.dateEnd.difference(subData.dateStart).inDays + 1;
+          final duration =
+              subData.dateEnd.difference(subData.dateStart).inDays + 1;
           final width = duration * widthPerDay;
 
           // variable for storing the start distance from the first start date
           // reactive variable for updating the bar position while dragging
-          final startDistance = ValueNotifier(subData.dateStart.difference(firstStartDate).inDays * widthPerDay);
+          final startDistance = ValueNotifier(
+              subData.dateStart.difference(firstStartDate).inDays *
+                  widthPerDay);
 
           // variable for storing bar current distance from the start
           // Fixed value for calculating the new date while dragging
@@ -783,7 +847,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
           return ValueListenableBuilder(
             valueListenable: selectedTaskIndex,
             builder: (context, selectedIndex, _) {
-              final isSelected = selectedIndex == GanttSubData.getUniqueIndex(index, subIndex);
+              final isSelected =
+                  selectedIndex == GanttSubData.getUniqueIndex(index, subIndex);
 
               // To notify the indicator that the parent is dragging
               final isDragging = ValueNotifier(false);
@@ -811,7 +876,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                               left: startDistanceValue,
                               child: GestureDetector(
                                 onTap: () {
-                                  selectedTaskIndex.value = GanttSubData.getUniqueIndex(index, subIndex);
+                                  selectedTaskIndex.value =
+                                      GanttSubData.getUniqueIndex(
+                                          index, subIndex);
 
                                   // trigger arrow refresh
                                   arrowState.value = !arrowState.value;
@@ -821,7 +888,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                     : (details) {
                                         setState(
                                           () {
-                                            widget.data[index].calculateMainDate();
+                                            widget.data[index]
+                                                .calculateMainDate();
                                           },
                                         );
 
@@ -843,24 +911,35 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                           startDistance: startDistance.value,
                                           distanceFromStart: distanceFromStart,
                                           widthPerDay: widthPerDay,
-                                          enableMagnetDrag: widget.enableMagnetDrag,
-                                          onNewDistance: (newDistanceInDays, newStartDistance) {
+                                          enableMagnetDrag:
+                                              widget.enableMagnetDrag,
+                                          onNewDistance: (newDistanceInDays,
+                                              newStartDistance) {
                                             // Update the subData date
-                                            widget.data[index].subData[subIndex] = subData.copyWith(
+                                            widget.data[index]
+                                                    .subData[subIndex] =
+                                                subData.copyWith(
                                               dateStart: subData.dateStart.add(
-                                                Duration(days: newDistanceInDays),
+                                                Duration(
+                                                    days: newDistanceInDays),
                                               ),
                                               dateEnd: subData.dateEnd.add(
-                                                Duration(days: newDistanceInDays),
+                                                Duration(
+                                                    days: newDistanceInDays),
                                               ),
                                             );
 
                                             // Update the start distance to re-render the bar
-                                            startDistance.value = newStartDistance;
+                                            startDistance.value =
+                                                newStartDistance;
 
                                             // Trigger re-rendering of the arrow
-                                            if (newStartDistance == newDistanceInDays * widthPerDay + distanceFromStart) {
-                                              arrowState.value = !arrowState.value;
+                                            if (newStartDistance ==
+                                                newDistanceInDays *
+                                                        widthPerDay +
+                                                    distanceFromStart) {
+                                              arrowState.value =
+                                                  !arrowState.value;
                                             }
                                           },
                                         );
@@ -871,13 +950,20 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                       '${subData.label}\n${DateFormat('dd MMM yyyy').format(subData.dateStart)} - ${DateFormat('dd MMM yyyy').format(subData.dateEnd)}',
                                   child: Container(
                                     width: width,
-                                    height: widget.heightPerRow - widget.rowSpacing,
+                                    height:
+                                        widget.heightPerRow - widget.rowSpacing,
                                     decoration: BoxDecoration(
                                       color: widget.subTaskBarColor,
-                                      borderRadius: !isSelected ? widget.chartBarBorderRadius : null,
+                                      borderRadius: !isSelected
+                                          ? widget.chartBarBorderRadius
+                                          : null,
                                       border: Border.all(
-                                        color: isSelected ? widget.activeBorderColor : Colors.transparent,
-                                        width: isSelected ? widget.activeBorderWidth : 0,
+                                        color: isSelected
+                                            ? widget.activeBorderColor
+                                            : Colors.transparent,
+                                        width: isSelected
+                                            ? widget.activeBorderWidth
+                                            : 0,
                                       ),
                                     ),
                                   ),
@@ -987,19 +1073,30 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                         // prevent indicator to be dragged outside the endDate for start indicator and vice versa
                         if (isStart && delta > barWidth - widthPerDay) {
                           return;
-                        } else if (!isStart && delta < -barWidth + widthPerDay) {
+                        } else if (!isStart &&
+                            delta < -barWidth + widthPerDay) {
                           return;
                         }
 
-                        final rawDistance = (indicatorDistanceValue - distanceFromStart) / widthPerDay;
-                        final newDistanceInDays = (delta > 0) ? rawDistance.ceil() : rawDistance.floor();
-                        double newIndicatorDistance = parentDistanceFromStart + delta;
+                        final rawDistance =
+                            (indicatorDistanceValue - distanceFromStart) /
+                                widthPerDay;
+                        final newDistanceInDays = (delta > 0)
+                            ? rawDistance.ceil()
+                            : rawDistance.floor();
+                        double newIndicatorDistance =
+                            parentDistanceFromStart + delta;
 
                         if (widget.enableMagnetDrag) {
-                          if (newIndicatorDistance % widthPerDay < widthPerDay / 10) {
-                            newIndicatorDistance = newIndicatorDistance - (newIndicatorDistance % widthPerDay);
-                          } else if (newIndicatorDistance % widthPerDay > widthPerDay * 9 / 10) {
-                            newIndicatorDistance = newIndicatorDistance + widthPerDay - (newIndicatorDistance % widthPerDay);
+                          if (newIndicatorDistance % widthPerDay <
+                              widthPerDay / 10) {
+                            newIndicatorDistance = newIndicatorDistance -
+                                (newIndicatorDistance % widthPerDay);
+                          } else if (newIndicatorDistance % widthPerDay >
+                              widthPerDay * 9 / 10) {
+                            newIndicatorDistance = newIndicatorDistance +
+                                widthPerDay -
+                                (newIndicatorDistance % widthPerDay);
                           }
                         }
 
@@ -1021,7 +1118,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
 
                         indicatorLocalPosition = details.localPosition.dx;
 
-                        if (newIndicatorDistance == newDistanceInDays * widthPerDay + distanceFromStart) {
+                        if (newIndicatorDistance ==
+                            newDistanceInDays * widthPerDay +
+                                distanceFromStart) {
                           arrowState.value = !arrowState.value;
                         }
                       },

@@ -60,14 +60,14 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     final firstData = ganttData.first;
     firstData.subData.add(
-          GanttSubData<String>(
-            id: GanttSubData.generateId(),
-            dateStart: ganttData[0].data.start,
-            dateEnd: ganttData[0].data.end,
-            data: ganttData[0].label,
-            label: ganttData[0].data.name,
-          ),
-        );
+      GanttSubData<String>(
+        id: GanttSubData.generateId(),
+        dateStart: ganttData[0].data.start,
+        dateEnd: ganttData[0].data.end,
+        data: ganttData[0].label,
+        label: ganttData[0].data.name,
+      ),
+    );
     // firstData.subData[1].addDependency(firstData.subData[0].id);
     // firstData.subData[2].addDependency(firstData.subData[0].id);
     super.initState();
@@ -85,6 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
+                    connectorColor: Colors.deepPurple,
                     gridLineColor: Colors.grey.withOpacity(0.5),
                     tableOuterColor: Colors.grey.withOpacity(0.8),
                     dayLabelStyle: const TextStyle(
