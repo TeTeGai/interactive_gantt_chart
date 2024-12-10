@@ -92,10 +92,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
-                    taskLabelBuilder: (data, index) {
+                    taskLabelBuilder: (textLabel, index) {
                       return Container(
                         alignment: Alignment.center,
-                        child: Text('data $index'),
+                        child: Text(textLabel),
                       );
                     },
                     onInitScrollToCurrentDate: true,

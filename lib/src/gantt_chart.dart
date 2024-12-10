@@ -151,6 +151,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
   final arrowState = ValueNotifier(false);
   final labelWidth = ValueNotifier(0.0);
   final isArrowConnecting = ValueNotifier(false);
+  final selectedLabelI = ValueNotifier(-1);
 
   @override
   void initState() {
@@ -161,6 +162,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     chartScrollController = linkedScrollController.addAndGet();
     arrowsScrollController = linkedScrollController.addAndGet();
 
+    labelScrollController.addListener(() {
+      selectedLabelI.value = -1;
+    });
+
+    // Handle dynamic date label
     chartHorizontalScrollController.addListener(() {
       final firstStartDate = widget.data.fold(
         DateTime.now(),
@@ -321,9 +327,14 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     double realChartHeight,
   ) {
     return ValueListenableBuilder(
-        valueListenable: labelWidth,
-        builder: (context, labelWidthValue, _) {
-          return Stack(
+      valueListenable: labelWidth,
+      builder: (context, labelWidthValue, _) {
+        return SizedBox(
+          width: labelWidthValue,
+          height: realChartHeight > constraints.maxHeight - widget.heightPerRow
+              ? constraints.maxHeight
+              : realChartHeight + widget.heightPerRow,
+          child: Stack(
             children: [
               SizedBox(
                 width: labelWidthValue,
@@ -354,29 +365,10 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                           itemBuilder: (context, index) {
                             final data = widget.data[index];
 
-                            if (widget.taskLabelBuilder != null) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                        color: widget.tableOuterColor),
-                                    left: BorderSide(
-                                        color: widget.tableOuterColor),
-                                  ),
-                                ),
-                                height: widget.data[index]
-                                    .getBarHeight(widget.heightPerRow),
-                                child:
-                                    widget.taskLabelBuilder!(data.label, index),
-                              );
-                            }
-
-                            return SizedBox(
-                              height: widget.data[index]
-                                  .getBarHeight(widget.heightPerRow),
-                              child: Center(
-                                child: Text(data.label),
-                              ),
+                            return labelItem(
+                              selectedLabelI: selectedLabelI,
+                              index: index,
+                              data: data,
                             );
                           },
                         ),
@@ -384,6 +376,65 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                     ),
                   ],
                 ),
+              ),
+
+              // Widget for reorder indicator
+              ValueListenableBuilder(
+                valueListenable: selectedLabelI,
+                builder: (context, selectedLabelIValue, _) {
+                  if (selectedLabelIValue == -1) {
+                    return const SizedBox();
+                  }
+                  final data = widget.data[selectedLabelIValue];
+                  final topPosition = ValueNotifier(
+                      data.subData.first.getIndexFromEntireData(widget.data) *
+                          widget.heightPerRow - labelScrollController.offset + (widget.heightPerRow / 2)
+                  );
+                  return ValueListenableBuilder(
+                    valueListenable: topPosition,
+                    builder: (context, topPositionValue, _) {
+                      return Positioned(
+                        left: 0,
+                        top: topPositionValue,
+                        child: GestureDetector(
+                          onVerticalDragStart: (_) {
+                            // isReordering.value = true;
+                          },
+                          onVerticalDragUpdate: (details) {
+                            topPosition.value += details.delta.dy;
+                          },
+                          onVerticalDragEnd: (details) {
+                            final newIndex = getReorderingDestinationIndex(
+                              listData: widget.data,
+                              currentIndex: selectedLabelIValue,
+                              details: details,
+                              heightPerRow: widget.heightPerRow,
+                              rowSpacing: widget.heightPerRow,
+                            );
+                            setState(() {
+                              if (newIndex != -1) {
+                                final temp =
+                                    widget.data.removeAt(selectedLabelIValue);
+                                widget.data.insert(newIndex, temp);
+                                selectedLabelI.value = newIndex;
+                              }
+                            });
+                          },
+                          child: Container(
+                            color: Colors.red,
+                            height: data.getBarHeight(widget.heightPerRow),
+                            width: labelWidth.value,
+                            child: labelItem(
+                              selectedLabelI: selectedLabelI,
+                              index: selectedLabelIValue,
+                              data: data,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  );
+                },
               ),
 
               // Widget to resize the label section
@@ -407,8 +458,73 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 ),
               ),
             ],
-          );
-        });
+          ),
+        );
+      },
+    );
+  }
+
+  Widget labelItem({
+    required ValueNotifier<int> selectedLabelI,
+    required int index,
+    required GanttData<T, S> data,
+  }) {
+    return ValueListenableBuilder(
+      valueListenable: selectedLabelI,
+      builder: (context, selectedLabelIValue, _) {
+        final isSelected = selectedLabelIValue == index;
+        return GestureDetector(
+          onTap: () {
+            (isSelected)
+                ? selectedLabelI.value = -1
+                : selectedLabelI.value = index;
+          },
+          // onVerticalDragEnd: !isSelected
+          //     ? null
+          //     : (details) {
+          //   final newIndex = getReorderingDestinationIndex(
+          //     listData: widget.data,
+          //     currentIndex: index,
+          //     details: details,
+          //     heightPerRow: widget.heightPerRow,
+          //     rowSpacing: widget.heightPerRow,
+          //   );
+          //   setState(() {
+          //     if (newIndex != -1) {
+          //       final temp = widget.data.removeAt(index);
+          //       widget.data.insert(newIndex, temp);
+          //     }
+          //   });
+          // },
+          // onVerticalDragUpdate: !isSelected
+          //     ? null
+          //     : (details) {
+          //   topPosition.value += details.delta.dy;
+          // },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: isSelected
+                  ? Border.all(color: widget.activeBorderColor)
+                  : Border(
+                      bottom: BorderSide(color: widget.tableOuterColor),
+                      left: BorderSide(color: widget.tableOuterColor),
+                    ),
+            ),
+            height: widget.data[index].getBarHeight(widget.heightPerRow),
+            width: labelWidth.value,
+            child: widget.taskLabelBuilder != null
+                ? widget.taskLabelBuilder!(data.label, index)
+                : SizedBox(
+                    height: widget.data[index].getBarHeight(
+                      widget.heightPerRow,
+                    ),
+                    child: Center(child: Text(data.label)),
+                  ),
+          ),
+        );
+      },
+    );
   }
 
   Container _buildMainGanttChart(

@@ -198,3 +198,34 @@ List<Widget> generateArrows(
   arrows.addAll(arrowsConnector);
   return arrows;
 }
+
+// Give List of GanttData, current data index, scrolled vertical distance in pixels(double), heightPerRow, and rowSpacing(each row will have this * 2)
+// Return the index of the data that is currently shown on the screen based on the vertical distance, return -1 if not found
+int getReorderingDestinationIndex({
+  required List<GanttData> listData,
+  required int currentIndex,
+  required DragEndDetails details,
+  required double heightPerRow,
+  required double rowSpacing,
+}) {
+  final verticalDistance = details.localPosition.dy;
+  print('Distance: $verticalDistance');
+  double currentMainDataRow = 0;
+
+  if (verticalDistance < 0) {
+    for (int i = currentIndex-1; i >= 0; i--) {
+      currentMainDataRow += listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
+      if (currentMainDataRow > -verticalDistance) {
+        return i;
+      }
+    }
+  } else {
+    for (int i = currentIndex+1; i < listData.length; i++) {
+      currentMainDataRow += listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
+      if (currentMainDataRow > verticalDistance) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
