@@ -13,6 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -59,6 +60,15 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     final firstData = ganttData.first;
+    firstData.subData.add(
+      GanttSubData<String>(
+        id: GanttSubData.generateId(),
+        dateStart: ganttData[0].data.start,
+        dateEnd: ganttData[0].data.end,
+        data: ganttData[0].label,
+        label: ganttData[0].data.name,
+      ),
+    );
     firstData.subData.add(
       GanttSubData<String>(
         id: GanttSubData.generateId(),

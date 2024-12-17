@@ -208,21 +208,37 @@ int getReorderingDestinationIndex({
   required double heightPerRow,
   required double rowSpacing,
 }) {
+  final baseRowHeight = heightPerRow + (rowSpacing * 2);
   final verticalDistance = details.localPosition.dy;
-  print('Distance: $verticalDistance');
-  double currentMainDataRow = 0;
+  print('verticalDistance: $verticalDistance');
+  double expectedRow = 0;
 
   if (verticalDistance < 0) {
-    for (int i = currentIndex-1; i >= 0; i--) {
-      currentMainDataRow += listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
-      if (currentMainDataRow > -verticalDistance) {
+    for (int i = currentIndex - 1; i >= 0; i--) {
+      expectedRow -= listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
+
+      print('expectedRow: $expectedRow');
+
+      if (verticalDistance > expectedRow) return -1;
+
+      final nextExpectedRow =
+          expectedRow - listData[i].getBarHeight(baseRowHeight);
+
+      if (verticalDistance > nextExpectedRow) {
         return i;
       }
     }
   } else {
-    for (int i = currentIndex+1; i < listData.length; i++) {
-      currentMainDataRow += listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
-      if (currentMainDataRow > verticalDistance) {
+    for (int i = currentIndex + 1; i < listData.length; i++) {
+      expectedRow += listData[i].getBarHeight(baseRowHeight);
+
+      print('expectedRow: $expectedRow');
+
+      if (verticalDistance < expectedRow) return -1;
+
+      final nextExpectedRow =
+          expectedRow + listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
+      if (verticalDistance < nextExpectedRow) {
         return i;
       }
     }

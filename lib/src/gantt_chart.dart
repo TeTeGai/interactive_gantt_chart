@@ -359,82 +359,103 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                             top: BorderSide(color: widget.tableOuterColor),
                           ),
                         ),
-                        child: ListView.builder(
-                          controller: labelScrollController,
-                          itemCount: widget.data.length,
-                          itemBuilder: (context, index) {
-                            final data = widget.data[index];
+                        child: Stack(
+                          children: [
+                            ListView.builder(
+                              controller: labelScrollController,
+                              itemCount: widget.data.length,
+                              itemBuilder: (context, index) {
+                                final data = widget.data[index];
 
-                            return labelItem(
-                              selectedLabelI: selectedLabelI,
-                              index: index,
-                              data: data,
-                            );
-                          },
+                                return labelItem(
+                                  selectedLabelI: selectedLabelI,
+                                  index: index,
+                                  data: data,
+                                );
+                              },
+                            ),
+
+                            // Widget for reorder indicator
+                            ValueListenableBuilder(
+                              valueListenable: selectedLabelI,
+                              builder: (context, selectedLabelIValue, _) {
+                                if (selectedLabelIValue == -1) {
+                                  return const SizedBox();
+                                }
+                                final data = widget.data[selectedLabelIValue];
+                                final currentLabelHeight = data.subData.first
+                                        .getIndexFromEntireData(widget.data) *
+                                    widget.heightPerRow;
+                                final topPosition = ValueNotifier(
+                                    currentLabelHeight -
+                                        labelScrollController.offset +
+                                        (widget.heightPerRow / 2) -
+                                        widget.heightPerRow * 1.5);
+                                return ValueListenableBuilder(
+                                  valueListenable: topPosition,
+                                  builder: (context, topPositionValue, _) {
+                                    return Positioned(
+                                      left: 0,
+                                      top: topPositionValue,
+                                      child: SizedBox(
+                                        height: data
+                                            .getBarHeight(widget.heightPerRow),
+                                        width: labelWidth.value,
+                                        child: Stack(
+                                          alignment: Alignment.centerLeft,
+                                          children: [
+                                            labelItem(
+                                              selectedLabelI: selectedLabelI,
+                                              index: selectedLabelIValue,
+                                              data: data,
+                                            ),
+                                            GestureDetector(
+                                              onVerticalDragEnd: (details) {
+                                                final newIndex =
+                                                    getReorderingDestinationIndex(
+                                                  listData: widget.data,
+                                                  currentIndex:
+                                                      selectedLabelIValue,
+                                                  details: details,
+                                                  heightPerRow:
+                                                      widget.heightPerRow,
+                                                  rowSpacing: widget.rowSpacing,
+                                                );
+                                                setState(() {
+                                                  if (newIndex != -1) {
+                                                    final temp = widget.data
+                                                        .removeAt(
+                                                            selectedLabelIValue);
+                                                    selectedLabelI.value =
+                                                        newIndex;
+                                                    widget.data
+                                                        .insert(newIndex, temp);
+                                                  }
+                                                });
+                                              },
+                                              onVerticalDragUpdate: (details) {
+                                                topPosition.value +=
+                                                    details.delta.dy;
+                                              },
+                                              child: const Icon(
+                                                Icons.drag_indicator,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-
-              // Widget for reorder indicator
-              ValueListenableBuilder(
-                valueListenable: selectedLabelI,
-                builder: (context, selectedLabelIValue, _) {
-                  if (selectedLabelIValue == -1) {
-                    return const SizedBox();
-                  }
-                  final data = widget.data[selectedLabelIValue];
-                  final topPosition = ValueNotifier(
-                      data.subData.first.getIndexFromEntireData(widget.data) *
-                          widget.heightPerRow - labelScrollController.offset + (widget.heightPerRow / 2)
-                  );
-                  return ValueListenableBuilder(
-                    valueListenable: topPosition,
-                    builder: (context, topPositionValue, _) {
-                      return Positioned(
-                        left: 0,
-                        top: topPositionValue,
-                        child: GestureDetector(
-                          onVerticalDragStart: (_) {
-                            // isReordering.value = true;
-                          },
-                          onVerticalDragUpdate: (details) {
-                            topPosition.value += details.delta.dy;
-                          },
-                          onVerticalDragEnd: (details) {
-                            final newIndex = getReorderingDestinationIndex(
-                              listData: widget.data,
-                              currentIndex: selectedLabelIValue,
-                              details: details,
-                              heightPerRow: widget.heightPerRow,
-                              rowSpacing: widget.heightPerRow,
-                            );
-                            setState(() {
-                              if (newIndex != -1) {
-                                final temp =
-                                    widget.data.removeAt(selectedLabelIValue);
-                                widget.data.insert(newIndex, temp);
-                                selectedLabelI.value = newIndex;
-                              }
-                            });
-                          },
-                          child: Container(
-                            color: Colors.red,
-                            height: data.getBarHeight(widget.heightPerRow),
-                            width: labelWidth.value,
-                            child: labelItem(
-                              selectedLabelI: selectedLabelI,
-                              index: selectedLabelIValue,
-                              data: data,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  );
-                },
               ),
 
               // Widget to resize the label section
@@ -479,28 +500,6 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 ? selectedLabelI.value = -1
                 : selectedLabelI.value = index;
           },
-          // onVerticalDragEnd: !isSelected
-          //     ? null
-          //     : (details) {
-          //   final newIndex = getReorderingDestinationIndex(
-          //     listData: widget.data,
-          //     currentIndex: index,
-          //     details: details,
-          //     heightPerRow: widget.heightPerRow,
-          //     rowSpacing: widget.heightPerRow,
-          //   );
-          //   setState(() {
-          //     if (newIndex != -1) {
-          //       final temp = widget.data.removeAt(index);
-          //       widget.data.insert(newIndex, temp);
-          //     }
-          //   });
-          // },
-          // onVerticalDragUpdate: !isSelected
-          //     ? null
-          //     : (details) {
-          //   topPosition.value += details.delta.dy;
-          // },
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
