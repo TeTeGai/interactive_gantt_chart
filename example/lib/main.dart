@@ -96,8 +96,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
                     connectorColor: Colors.deepPurple,
-                    gridLineColor: Colors.grey.withOpacity(0.5),
-                    tableOuterColor: Colors.grey.withOpacity(0.8),
+                    gridLineColor: Colors.grey,
+                    tableOuterColor: Colors.grey,
+                    reorderIndicatorColor: Colors.blue,
                     dayLabelStyle: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

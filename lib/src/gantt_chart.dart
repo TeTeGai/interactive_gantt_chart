@@ -56,6 +56,8 @@ class GanttChart<T, S> extends StatefulWidget {
   final double arrowSize;
   final double connectorSize;
   final Color connectorColor;
+  final Color labelBackgroundColor;
+  final Color reorderIndicatorColor;
 
   /// Enable the magnet drag feature
   /// If enabled, the draggable bar & indicator will snap to the nearest date
@@ -93,6 +95,15 @@ class GanttChart<T, S> extends StatefulWidget {
     int index,
     DragEndDetails dragDetails,
   )? onDragEnd;
+
+  /// Function that called when certain label reordered.
+  /// [orderedIndex] is the index of the label that is reordered,
+  /// [targetIndex] is the index of the label that is the target of the reorder,
+  /// [targetIndex] returns -1 if the label is not reordered to a valid location.
+  final void Function(
+    int orderedIndex,
+    int targetIndex,
+  )? onReordered;
 
   const GanttChart({
     super.key,
@@ -132,6 +143,9 @@ class GanttChart<T, S> extends StatefulWidget {
     this.enableMagnetDrag = true,
     this.connectorSize = 12,
     this.connectorColor = Colors.red,
+    this.onReordered,
+    this.labelBackgroundColor = Colors.white,
+    this.reorderIndicatorColor = Colors.black,
   });
 
   @override
@@ -421,6 +435,12 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                       widget.heightPerRow,
                                                   rowSpacing: widget.rowSpacing,
                                                 );
+
+                                                widget.onReordered?.call(
+                                                  selectedLabelIValue,
+                                                  newIndex,
+                                                );
+
                                                 setState(() {
                                                   if (newIndex != -1) {
                                                     final temp = widget.data
@@ -437,8 +457,10 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                 topPosition.value +=
                                                     details.delta.dy;
                                               },
-                                              child: const Icon(
+                                              child: Icon(
                                                 Icons.drag_indicator,
+                                                color: widget
+                                                    .reorderIndicatorColor,
                                                 size: 20,
                                               ),
                                             ),
@@ -498,11 +520,14 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
           onTap: () {
             (isSelected)
                 ? selectedLabelI.value = -1
-                : selectedLabelI.value = index;
+                : {
+                    selectedLabelI.value = index,
+                    selectedTaskIndex.value = index,
+                  };
           },
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: widget.labelBackgroundColor,
               border: isSelected
                   ? Border.all(color: widget.activeBorderColor)
                   : Border(
@@ -676,12 +701,13 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                   for (int i = 0; i < maxChartWidth / widthPerDay; i++)
                     Positioned(
                       left: i * widthPerDay,
-                      child: Container(
-                        height: (realChartHeight),
-                        width: 1,
-                        color: (ganttMode == GanttMode.daily)
-                            ? widget.gridLineColor
-                            : widget.gridLineColor.withOpacity(0.5),
+                      child: Opacity(
+                        opacity: (ganttMode == GanttMode.daily) ? 1 : 0.5,
+                        child: Container(
+                          height: (realChartHeight),
+                          width: 1,
+                          color: widget.gridLineColor,
+                        ),
                       ),
                     ),
 
@@ -862,6 +888,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
               child: GestureDetector(
                 onTap: () {
                   selectedTaskIndex.value = index;
+                  selectedLabelI.value = index;
 
                   // trigger arrow refresh
                   arrowState.value = !arrowState.value;

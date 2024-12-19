@@ -66,4 +66,4 @@
 ## 0.1.3 (unreleased)
 
 * Add feature to reorder GanttData by dragging the label task on the left side
-* 
+* Add some custom color parameter for label section

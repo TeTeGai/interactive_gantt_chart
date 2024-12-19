@@ -16,7 +16,7 @@ void moveEntireBar({
 }) {
   final rawDistance = (startDistance - distanceFromStart) / widthPerDay;
   final newDistanceInDays =
-  (deltaDX > 0) ? rawDistance.ceil() : rawDistance.floor();
+      (deltaDX > 0) ? rawDistance.ceil() : rawDistance.floor();
 
   // distance for current animation
   double newStartDistance = startDistance + deltaDX;
@@ -33,7 +33,8 @@ void moveEntireBar({
 }
 
 /// For now also generate arrows connector to avoid too much nested loop
-List<Widget> generateArrows(List<GanttData> listData, {
+List<Widget> generateArrows(
+  List<GanttData> listData, {
   required double widthPerDay,
   required double heightPerRow,
   required DateTime firstDateShown,
@@ -58,9 +59,7 @@ List<Widget> generateArrows(List<GanttData> listData, {
       final isSelected =
           selectedIndex == GanttSubData.getUniqueIndex(parentIndex, subIndex);
       final distanceFromStart =
-          subData.dateStart
-              .difference(firstDateShown)
-              .inDays * widthPerDay;
+          subData.dateStart.difference(firstDateShown).inDays * widthPerDay;
 
       // Start connector
       arrowsConnector.add(
@@ -89,11 +88,11 @@ List<Widget> generateArrows(List<GanttData> listData, {
                 final targetData = listData[parentIndex].subData[targetIndex];
                 final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
                 if (isTargetInRangeOfTwoOrigin(
-                  targetDate,
-                  targetData.dateStart.subtract(const Duration(days: 1)),
-                  targetData.dateEnd,
-                  rangeInDays: rangeInDays,
-                ) &&
+                      targetDate,
+                      targetData.dateStart.subtract(const Duration(days: 1)),
+                      targetData.dateEnd,
+                      rangeInDays: rangeInDays,
+                    ) &&
                     targetIndex != subIndex) {
                   listData[parentIndex]
                       .subData[targetIndex]
@@ -101,7 +100,6 @@ List<Widget> generateArrows(List<GanttData> listData, {
                 }
                 onArrowConnected();
               } catch (e) {
-                // Todo: show error message either with snackbar or dialog
                 print('Error: $e');
               }
             },
@@ -113,16 +111,12 @@ List<Widget> generateArrows(List<GanttData> listData, {
       arrowsConnector.add(
         Positioned(
           left: isSelected
-              ? (subData.dateEnd
-              .difference(firstDateShown)
-              .inDays + 1) *
-              widthPerDay +
-              connectorSize * 1.5
-              : (subData.dateEnd
-              .difference(firstDateShown)
-              .inDays + 1) *
-              widthPerDay +
-              1,
+              ? (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                      widthPerDay +
+                  connectorSize * 1.5
+              : (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                      widthPerDay +
+                  1,
           top: subData.getIndexFromEntireData(listData) * heightPerRow +
               heightPerRow / 2 -
               connectorSize / 2,
@@ -145,11 +139,11 @@ List<Widget> generateArrows(List<GanttData> listData, {
                 final targetData = listData[parentIndex].subData[targetIndex];
                 final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
                 if (isTargetInRangeOfTwoOrigin(
-                  targetDate,
-                  targetData.dateStart.subtract(const Duration(days: 1)),
-                  targetData.dateEnd,
-                  rangeInDays: rangeInDays,
-                ) &&
+                      targetDate,
+                      targetData.dateStart.subtract(const Duration(days: 1)),
+                      targetData.dateEnd,
+                      rangeInDays: rangeInDays,
+                    ) &&
                     targetIndex != subIndex) {
                   listData[parentIndex]
                       .subData[targetIndex]
@@ -168,12 +162,12 @@ List<Widget> generateArrows(List<GanttData> listData, {
       for (String dependency in subData.dependencies) {
         try {
           final dependentSubData =
-          subData.getDependencies(data.subData).firstWhere(
-                (element) => element.id == dependency,
-          );
+              subData.getDependencies(data.subData).firstWhere(
+                    (element) => element.id == dependency,
+                  );
           final pointedSubData = subData;
           final dependentIndex =
-          dependentSubData.getIndexFromEntireData(listData);
+              dependentSubData.getIndexFromEntireData(listData);
           final pointedIndex = pointedSubData.getIndexFromEntireData(listData);
 
           arrows.add(
@@ -226,17 +220,12 @@ int getReorderingDestinationIndex({
           2; // adjust the vertical distance
       expectedRow -= listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
 
-      print('verticalDistance: $verticalDistance');
-      print('expectedRow: $expectedRow');
-
       if (verticalDistance > expectedRow) return -1;
-
 
       if (i == 0) return i;
 
       final nextExpectedRow =
           expectedRow - listData[i - 1].getBarHeight(baseRowHeight);
-      print('nextExpectedRow: $nextExpectedRow');
 
       if (verticalDistance > nextExpectedRow) {
         return i;
@@ -244,19 +233,16 @@ int getReorderingDestinationIndex({
     }
   } else {
     for (int i = currentIndex + 1; i < listData.length; i++) {
-      verticalDistance += listData[currentIndex].getBarHeight(
-          baseRowHeight) / 2; // adjust the vertical distance
+      verticalDistance += listData[currentIndex].getBarHeight(baseRowHeight) /
+          2; // adjust the vertical distance
       expectedRow += listData[i].getBarHeight(baseRowHeight);
 
-      print('verticalDistance: $verticalDistance');
-      print('expectedRow: $expectedRow');
       if (verticalDistance < expectedRow) return -1;
 
       if (i == listData.length - 1) return i;
 
       final nextExpectedRow =
           expectedRow + listData[i + 1].getBarHeight(baseRowHeight);
-      print('nextExpectedRow: $nextExpectedRow');
       if (verticalDistance < nextExpectedRow) {
         return i;
       }
