@@ -62,3 +62,8 @@
 * Task dependencies can be added by user input by dragging the indicator to another task. (Currently only support same parent task)
 * Fix some bugs on displayed arrow dependencies
 * Change drag indicator default style
+
+## 0.1.3
+
+* Add feature to reorder GanttData by dragging the label task on the left side
+* Add some custom color parameter for label section

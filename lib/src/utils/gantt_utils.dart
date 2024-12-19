@@ -100,7 +100,6 @@ List<Widget> generateArrows(
                 }
                 onArrowConnected();
               } catch (e) {
-                // Todo: show error message either with snackbar or dialog
                 print('Error: $e');
               }
             },
@@ -197,4 +196,57 @@ List<Widget> generateArrows(
 
   arrows.addAll(arrowsConnector);
   return arrows;
+}
+
+// Give List of GanttData, current data index, scrolled vertical distance in pixels(double), heightPerRow, and rowSpacing(each row will have this * 2)
+// Return the index of the data that is currently shown on the screen based on the vertical distance, return -1 if not found
+int getReorderingDestinationIndex({
+  required List<GanttData> listData,
+  required int currentIndex,
+  required DragEndDetails details,
+  required double heightPerRow,
+  required double rowSpacing,
+}) {
+  final baseRowHeight = heightPerRow + (rowSpacing * 2);
+
+  /// The drag indicator is in the middle of the bar, so might need to adjust the vertical distance
+  /// based on drag direction
+  double verticalDistance = details.localPosition.dy;
+  double expectedRow = 0;
+
+  if (verticalDistance < 0) {
+    for (int i = currentIndex - 1; i >= 0; i--) {
+      verticalDistance -= listData[currentIndex].getBarHeight(baseRowHeight) /
+          2; // adjust the vertical distance
+      expectedRow -= listData[i].getBarHeight(heightPerRow + rowSpacing * 2);
+
+      if (verticalDistance > expectedRow) return -1;
+
+      if (i == 0) return i;
+
+      final nextExpectedRow =
+          expectedRow - listData[i - 1].getBarHeight(baseRowHeight);
+
+      if (verticalDistance > nextExpectedRow) {
+        return i;
+      }
+    }
+  } else {
+    for (int i = currentIndex + 1; i < listData.length; i++) {
+      verticalDistance += listData[currentIndex].getBarHeight(baseRowHeight) /
+          2; // adjust the vertical distance
+      expectedRow += listData[i].getBarHeight(baseRowHeight);
+
+      if (verticalDistance < expectedRow) return -1;
+
+      if (i == listData.length - 1) return i;
+
+      final nextExpectedRow =
+          expectedRow + listData[i + 1].getBarHeight(baseRowHeight);
+      if (verticalDistance < nextExpectedRow) {
+        return i;
+      }
+    }
+  }
+  return -1;
 }

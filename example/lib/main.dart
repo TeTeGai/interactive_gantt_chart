@@ -13,6 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -68,6 +69,15 @@ class _MyHomePageState extends State<MyHomePage> {
         label: ganttData[0].data.name,
       ),
     );
+    firstData.subData.add(
+      GanttSubData<String>(
+        id: GanttSubData.generateId(),
+        dateStart: ganttData[0].data.start,
+        dateEnd: ganttData[0].data.end,
+        data: ganttData[0].label,
+        label: ganttData[0].data.name,
+      ),
+    );
     // firstData.subData[1].addDependency(firstData.subData[0].id);
     // firstData.subData[2].addDependency(firstData.subData[0].id);
     super.initState();
@@ -86,16 +96,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
                     connectorColor: Colors.deepPurple,
-                    gridLineColor: Colors.grey.withOpacity(0.5),
-                    tableOuterColor: Colors.grey.withOpacity(0.8),
+                    gridLineColor: Colors.grey,
+                    tableOuterColor: Colors.grey,
+                    reorderIndicatorColor: Colors.blue,
                     dayLabelStyle: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
-                    taskLabelBuilder: (data, index) {
+                    taskLabelBuilder: (textLabel, index) {
                       return Container(
                         alignment: Alignment.center,
-                        child: Text('data $index'),
+                        child: Text(textLabel),
                       );
                     },
                     onInitScrollToCurrentDate: true,
