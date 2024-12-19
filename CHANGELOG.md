@@ -63,7 +63,7 @@
 * Fix some bugs on displayed arrow dependencies
 * Change drag indicator default style
 
-## 0.1.3 (unreleased)
+## 0.1.3
 
 * Add feature to reorder GanttData by dragging the label task on the left side
 * Add some custom color parameter for label section
