@@ -67,3 +67,8 @@
 
 * Add feature to reorder GanttData by dragging the label task on the left side
 * Add some custom color parameter for label section
+
+## 0.1.4 (Unreleased)
+
+* Fix selected task index not updated after reordered
+* Now only show arrow connector on selected GanttData

@@ -448,6 +448,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                             selectedLabelIValue);
                                                     selectedLabelI.value =
                                                         newIndex;
+                                                    selectedTaskIndex.value =
+                                                        newIndex;
                                                     widget.data
                                                         .insert(newIndex, temp);
                                                   }
