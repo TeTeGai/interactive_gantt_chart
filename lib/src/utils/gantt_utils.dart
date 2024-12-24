@@ -75,7 +75,7 @@ List<Widget> generateArrows(
           Positioned(
             left: isSelected
                 ? distanceFromStart - connectorSize * 2.5
-                : distanceFromStart - connectorSize - 1,
+                : distanceFromStart - connectorSize - 1.5,
             top: subData.getIndexFromEntireData(listData) * heightPerRow +
                 heightPerRow / 2 -
                 connectorSize / 2,
@@ -95,10 +95,10 @@ List<Widget> generateArrows(
                 try {
                   isArrowConnecting.value = false;
                   final targetData = listData[parentIndex].subData[targetIndex];
-                  final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
+                  final rangeInDays = (mode == GanttMode.monthly) ? 4 : 1;
                   if (isTargetInRangeOfTwoOrigin(
                         targetDate,
-                        targetData.dateStart.subtract(const Duration(days: 1)),
+                        targetData.dateStart,
                         targetData.dateEnd,
                         rangeInDays: rangeInDays,
                       ) &&
@@ -125,7 +125,7 @@ List<Widget> generateArrows(
                     connectorSize * 1.5
                 : (subData.dateEnd.difference(firstDateShown).inDays + 1) *
                         widthPerDay +
-                    1,
+                    1.5,
             top: subData.getIndexFromEntireData(listData) * heightPerRow +
                 heightPerRow / 2 -
                 connectorSize / 2,
@@ -181,19 +181,25 @@ List<Widget> generateArrows(
           final pointedIndex = pointedSubData.getIndexFromEntireData(listData);
 
           arrows.add(
-            CustomPaint(
-              painter: ArrowPainter(
-                dependentSubData: dependentSubData,
-                dependentIndex: dependentIndex,
-                pointedSubData: pointedSubData,
-                pointedIndex: pointedIndex,
-                widthPerDay: widthPerDay,
-                heightPerRow: heightPerRow,
-                indicatorWidth: indicatorWidth,
-                firstDateShown: firstDateShown,
-                arrowColor: arrowColor,
-                arrowSize: arrowSize,
-                isSelected: isSelected,
+            GestureDetector(
+              onTap: () {
+                print('Arrow tapped');
+              },
+              child: CustomPaint(
+                painter: ArrowPainter(
+                  dependentSubData: dependentSubData,
+                  dependentIndex: dependentIndex,
+                  pointedSubData: pointedSubData,
+                  pointedIndex: pointedIndex,
+                  widthPerDay: widthPerDay,
+                  heightPerRow: heightPerRow,
+                  indicatorWidth: indicatorWidth,
+                  firstDateShown: firstDateShown,
+                  arrowColor: arrowColor,
+                  arrowSize: arrowSize,
+                  isSelected: isSelected,
+                ),
+                child: Container(),
               ),
             ),
           );

@@ -94,15 +94,15 @@ class _ArrowConnectorState extends State<ArrowConnector> {
             widget.originIndex + (verticalPosition / widget.heightPerRow);
         final targetX = currentPoint.dx / widget.widthPerDay;
 
-        final targetIndex = targetY.floor();
+        final targetIndex = targetY.round();
         late DateTime targetDate;
 
         if (widget.isStart) {
           targetDate =
-              widget.originDateStart.add(Duration(days: targetX.floor()));
+              widget.originDateStart.add(Duration(days: targetX.round()));
         } else {
           targetDate =
-              widget.originDateEnd.add(Duration(days: targetX.floor()));
+              widget.originDateEnd.add(Duration(days: targetX.round()));
         }
 
         widget.onDragEnd(targetIndex, targetDate);
