@@ -771,6 +771,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                       widget.connectorColor,
                                                   isArrowConnecting:
                                                       isArrowConnecting,
+                                                  arrowState: arrowState,
                                                   mode: ganttMode,
                                                   onArrowStartConnecting: () {
                                                     arrowState.value =

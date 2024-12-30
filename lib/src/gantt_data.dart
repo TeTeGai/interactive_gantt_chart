@@ -133,6 +133,12 @@ class GanttSubData<T> {
   }
 
   void addDependency(String id) {
+    if (dependencies.contains(id)) return;
     dependencies.add(id);
+  }
+
+  void removeDependency(String id) {
+    if (!dependencies.contains(id)) return;
+    dependencies.remove(id);
   }
 }
