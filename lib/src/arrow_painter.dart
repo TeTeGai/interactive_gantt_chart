@@ -40,10 +40,10 @@ class ArrowPainter extends CustomPainter {
     final startY = dependentIndex * heightPerRow + heightPerRow / 2;
     final endX = isSelected
         ? pointedSubData.dateStart.difference(firstDateShown).inDays *
-        widthPerDay -
-        indicatorWidth * 1.5
+                widthPerDay -
+            indicatorWidth * 1.5
         : pointedSubData.dateStart.difference(firstDateShown).inDays *
-        widthPerDay;
+            widthPerDay;
     final endY = pointedIndex * heightPerRow + heightPerRow / 2;
 
     final midPointX = (startX + endX) / 2;

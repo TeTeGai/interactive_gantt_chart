@@ -77,3 +77,8 @@
 ## 0.1.5
 
 * Downgrading intl version to 0.19.0 due most other package still using this version
+
+## 0.1.6
+
+* Add ability to export GanttMode
+* Option to disable horizontal drag, reordering rows and reassigning

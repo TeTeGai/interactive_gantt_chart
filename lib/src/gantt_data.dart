@@ -88,7 +88,7 @@ class GanttSubData<T> {
     }).toList();
   }
 
-  /// Method to get current SubData index counted from the entire List<GanttData> (including other Data subData)
+  /// Method to get current SubData index counted from the entire List of GanttData (including other Data subData)
   int getIndexFromEntireData(List<GanttData> entireData) {
     int index = 0;
     for (GanttData data in entireData) {

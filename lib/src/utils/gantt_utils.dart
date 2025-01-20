@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/interactive_gantt_chart.dart';
-import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:interactive_gantt_chart/src/utils/date_utils.dart';
 
 import '../arrow_connector.dart';
@@ -45,7 +44,7 @@ List<Widget> generateArrows(
   required double connectorSize,
   required Color connectorColor,
   required ValueNotifier<bool> isArrowConnecting,
-      required ValueNotifier<bool> arrowState,
+  required ValueNotifier<bool> arrowState,
   required GanttMode mode,
   required void Function() onArrowConnected,
   required void Function() onArrowStartConnecting,
@@ -96,17 +95,22 @@ List<Widget> generateArrows(
                 try {
                   isArrowConnecting.value = false;
                   final targetData = listData[parentIndex].subData[targetIndex];
-                  final isTargetSelected = selectedIndex == GanttSubData.getUniqueIndex(parentIndex, targetIndex);
-                  final additionalDays = !isTargetSelected ? const Duration(days: 0) : switch(mode) {
-                    GanttMode.daily => const Duration(days: 0),
-                    GanttMode.weekly => const Duration(days: 1),
-                    GanttMode.monthly => const Duration(days: 3),
-                  };
+                  final isTargetSelected = selectedIndex ==
+                      GanttSubData.getUniqueIndex(parentIndex, targetIndex);
+                  final additionalDays = !isTargetSelected
+                      ? const Duration(days: 0)
+                      : switch (mode) {
+                          GanttMode.daily => const Duration(days: 0),
+                          GanttMode.weekly => const Duration(days: 1),
+                          GanttMode.monthly => const Duration(days: 3),
+                        };
                   final rangeInDays = (mode == GanttMode.monthly) ? 4 : 1;
                   if (isTargetInRangeOfTwoOrigin(
                         targetDate,
                         targetData.dateStart.subtract(additionalDays),
-                        targetData.dateEnd.add(additionalDays).add(const Duration(days: 1)),
+                        targetData.dateEnd
+                            .add(additionalDays)
+                            .add(const Duration(days: 1)),
                         rangeInDays: rangeInDays,
                       ) &&
                       targetIndex != subIndex) {
@@ -153,12 +157,15 @@ List<Widget> generateArrows(
                 try {
                   isArrowConnecting.value = false;
                   final targetData = listData[parentIndex].subData[targetIndex];
-                  final isTargetSelected = selectedIndex == GanttSubData.getUniqueIndex(parentIndex, targetIndex);
-                  final additionalDays = !isTargetSelected ? const Duration(days: 0) : switch(mode) {
-                    GanttMode.daily => const Duration(days: 1),
-                    GanttMode.weekly => const Duration(days: 1),
-                    GanttMode.monthly => const Duration(days: 3),
-                  };
+                  final isTargetSelected = selectedIndex ==
+                      GanttSubData.getUniqueIndex(parentIndex, targetIndex);
+                  final additionalDays = !isTargetSelected
+                      ? const Duration(days: 0)
+                      : switch (mode) {
+                          GanttMode.daily => const Duration(days: 1),
+                          GanttMode.weekly => const Duration(days: 1),
+                          GanttMode.monthly => const Duration(days: 3),
+                        };
                   final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
                   if (isTargetInRangeOfTwoOrigin(
                         targetDate,
@@ -195,9 +202,6 @@ List<Widget> generateArrows(
 
           arrows.add(
             GestureDetector(
-              onTap: () {
-                print('Arrow tapped');
-              },
               onLongPress: () {
                 subData.removeDependency(dependency);
                 arrowState.value = !arrowState.value;

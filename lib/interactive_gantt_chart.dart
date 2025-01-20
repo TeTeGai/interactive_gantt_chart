@@ -1,4 +1,4 @@
-library interactive_gantt_chart;
+library;
 
 export 'src/gantt_chart.dart';
 export 'src/gantt_data.dart';

@@ -466,23 +466,24 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                       selectedLabelI.value =
                                                           newIndex;
                                                       selectedTaskIndex.value =
-                                                        newIndex;
-                                                    widget.data
-                                                        .insert(newIndex, temp);
-                                                  }
-                                                });
-                                              },
-                                              onVerticalDragUpdate: (details) {
-                                                topPosition.value +=
-                                                    details.delta.dy;
-                                              },
-                                              child: Icon(
-                                                Icons.drag_indicator,
-                                                color: widget
-                                                    .reorderIndicatorColor,
-                                                size: 20,
+                                                          newIndex;
+                                                      widget.data.insert(
+                                                          newIndex, temp);
+                                                    }
+                                                  });
+                                                },
+                                                onVerticalDragUpdate:
+                                                    (details) {
+                                                  topPosition.value +=
+                                                      details.delta.dy;
+                                                },
+                                                child: Icon(
+                                                  Icons.drag_indicator,
+                                                  color: widget
+                                                      .reorderIndicatorColor,
+                                                  size: 20,
+                                                ),
                                               ),
-                                            ),
                                           ],
                                         ),
                                       ),
