@@ -465,6 +465,8 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                               selectedLabelIValue);
                                                       selectedLabelI.value =
                                                           newIndex;
+                                                      selectedTaskIndex.value =
+                                                          newIndex;
                                                       widget.data.insert(
                                                           newIndex, temp);
                                                     }
@@ -788,11 +790,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                                       widget.connectorColor,
                                                   isArrowConnecting:
                                                       isArrowConnecting,
+                                                  arrowState: arrowState,
                                                   mode: ganttMode,
                                                   onArrowStartConnecting: () {
-                                                    selectedTaskIndex.value =
-                                                        -1;
-
                                                     arrowState.value =
                                                         !arrowState.value;
                                                   },
@@ -1166,6 +1166,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       parentDistanceFromStart: startDistance.value,
                       isParentDragging: isDragging,
                       isIndicatorDragging: isIndicatorDragging,
+                      isArrowConnecting: isArrowConnecting,
                       barWidth: width,
                     ),
 
@@ -1179,6 +1180,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       parentDistanceFromStart: startDistance.value,
                       isParentDragging: isDragging,
                       isIndicatorDragging: isIndicatorDragging,
+                      isArrowConnecting: isArrowConnecting,
                       barWidth: width,
                     ),
                   ],
@@ -1199,6 +1201,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     required double parentDistanceFromStart,
     required ValueNotifier<bool> isParentDragging,
     required ValueNotifier<bool> isIndicatorDragging,
+    required ValueNotifier<bool> isArrowConnecting,
     required int subIndex,
     required double barWidth,
   }) {

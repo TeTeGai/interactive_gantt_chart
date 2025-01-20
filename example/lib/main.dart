@@ -95,10 +95,17 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
+                    onReordered: (orderedIndex, newIndex) {
+                      /// DON'T MANUALLY REORDER THE DATA!
+                      /// Reordering data already handled by the package and only caused some strange behavior if reordered manually
+                      // if (newIndex == -1) return;
+                      // final data = ganttData[orderedIndex];
+                      // ganttData.removeAt(orderedIndex);
+                      // ganttData.insert(newIndex, data);
+                    },
                     connectorColor: Colors.deepPurple,
                     gridLineColor: Colors.grey,
                     tableOuterColor: Colors.grey,
-                    reorderIndicatorColor: Colors.blue,
                     dayLabelStyle: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

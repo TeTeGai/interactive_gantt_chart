@@ -67,3 +67,18 @@
 
 * Add feature to reorder GanttData by dragging the label task on the left side
 * Add some custom color parameter for label section
+
+## 0.1.4
+
+* Fix selected task index not updated after reordered
+* Fix accuracy of arrow connection to active/selected GanttSubData
+* Now only show arrow connector on selected GanttData
+
+## 0.1.5
+
+* Downgrading intl version to 0.19.0 due most other package still using this version
+
+## 0.1.6
+
+* Add ability to export GanttMode
+* Option to disable horizontal drag, reordering rows and reassigning

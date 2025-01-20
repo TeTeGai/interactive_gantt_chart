@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/interactive_gantt_chart.dart';
-import 'package:interactive_gantt_chart/src/gantt_mode.dart';
 import 'package:interactive_gantt_chart/src/utils/date_utils.dart';
 
 import '../arrow_connector.dart';
@@ -45,6 +44,7 @@ List<Widget> generateArrows(
   required double connectorSize,
   required Color connectorColor,
   required ValueNotifier<bool> isArrowConnecting,
+  required ValueNotifier<bool> arrowState,
   required GanttMode mode,
   required void Function() onArrowConnected,
   required void Function() onArrowStartConnecting,
@@ -53,6 +53,14 @@ List<Widget> generateArrows(
   final arrowsConnector = <Widget>[];
   for (GanttData data in listData) {
     final parentIndex = listData.indexOf(data);
+    bool isParentSelected = selectedIndex == parentIndex;
+    if (!isParentSelected) {
+      for (int i = 0; i < data.subData.length; i++) {
+        if (selectedIndex == GanttSubData.getUniqueIndex(parentIndex, i)) {
+          isParentSelected = true;
+        }
+      }
+    }
     for (GanttSubData subData in data.subData) {
       // Generate arrows connector for each subData
       final subIndex = data.subData.indexOf(subData);
@@ -61,102 +69,124 @@ List<Widget> generateArrows(
       final distanceFromStart =
           subData.dateStart.difference(firstDateShown).inDays * widthPerDay;
 
-      // Start connector
-      arrowsConnector.add(
-        Positioned(
-          left: isSelected
-              ? distanceFromStart - connectorSize * 2.5
-              : distanceFromStart - connectorSize - 1,
-          top: subData.getIndexFromEntireData(listData) * heightPerRow +
-              heightPerRow / 2 -
-              connectorSize / 2,
-          child: ArrowConnector(
-            widthPerDay: widthPerDay,
-            heightPerRow: heightPerRow,
-            size: connectorSize,
-            connectorColor: connectorColor,
-            originIndex: subIndex,
-            originDateStart: subData.dateStart,
-            originDateEnd: subData.dateEnd,
-            onDragStart: () {
-              isArrowConnecting.value = true;
-              onArrowStartConnecting();
-            },
-            onDragEnd: (targetIndex, targetDate) {
-              try {
-                isArrowConnecting.value = false;
-                final targetData = listData[parentIndex].subData[targetIndex];
-                final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
-                if (isTargetInRangeOfTwoOrigin(
-                      targetDate,
-                      targetData.dateStart.subtract(const Duration(days: 1)),
-                      targetData.dateEnd,
-                      rangeInDays: rangeInDays,
-                    ) &&
-                    targetIndex != subIndex) {
-                  listData[parentIndex]
-                      .subData[targetIndex]
-                      .addDependency(subData.id);
+      if (isParentSelected) {
+        // Start connector
+        arrowsConnector.add(
+          Positioned(
+            left: isSelected
+                ? distanceFromStart - connectorSize * 2.5
+                : distanceFromStart - connectorSize - 1.5,
+            top: subData.getIndexFromEntireData(listData) * heightPerRow +
+                heightPerRow / 2 -
+                connectorSize / 2,
+            child: ArrowConnector(
+              widthPerDay: widthPerDay,
+              heightPerRow: heightPerRow,
+              size: connectorSize,
+              connectorColor: connectorColor,
+              originIndex: subIndex,
+              originDateStart: subData.dateStart,
+              originDateEnd: subData.dateEnd,
+              onDragStart: () {
+                isArrowConnecting.value = true;
+                onArrowStartConnecting();
+              },
+              onDragEnd: (targetIndex, targetDate) {
+                try {
+                  isArrowConnecting.value = false;
+                  final targetData = listData[parentIndex].subData[targetIndex];
+                  final isTargetSelected = selectedIndex ==
+                      GanttSubData.getUniqueIndex(parentIndex, targetIndex);
+                  final additionalDays = !isTargetSelected
+                      ? const Duration(days: 0)
+                      : switch (mode) {
+                          GanttMode.daily => const Duration(days: 0),
+                          GanttMode.weekly => const Duration(days: 1),
+                          GanttMode.monthly => const Duration(days: 3),
+                        };
+                  final rangeInDays = (mode == GanttMode.monthly) ? 4 : 1;
+                  if (isTargetInRangeOfTwoOrigin(
+                        targetDate,
+                        targetData.dateStart.subtract(additionalDays),
+                        targetData.dateEnd
+                            .add(additionalDays)
+                            .add(const Duration(days: 1)),
+                        rangeInDays: rangeInDays,
+                      ) &&
+                      targetIndex != subIndex) {
+                    listData[parentIndex]
+                        .subData[targetIndex]
+                        .addDependency(subData.id);
+                  }
+                  onArrowConnected();
+                } catch (e) {
+                  print('Error: $e');
                 }
-                onArrowConnected();
-              } catch (e) {
-                print('Error: $e');
-              }
-            },
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      // End connector
-      arrowsConnector.add(
-        Positioned(
-          left: isSelected
-              ? (subData.dateEnd.difference(firstDateShown).inDays + 1) *
-                      widthPerDay +
-                  connectorSize * 1.5
-              : (subData.dateEnd.difference(firstDateShown).inDays + 1) *
-                      widthPerDay +
-                  1,
-          top: subData.getIndexFromEntireData(listData) * heightPerRow +
-              heightPerRow / 2 -
-              connectorSize / 2,
-          child: ArrowConnector(
-            widthPerDay: widthPerDay,
-            heightPerRow: heightPerRow,
-            size: connectorSize,
-            connectorColor: connectorColor,
-            originIndex: subIndex,
-            originDateStart: subData.dateStart,
-            originDateEnd: subData.dateEnd,
-            isStart: false,
-            onDragStart: () {
-              isArrowConnecting.value = true;
-              onArrowStartConnecting();
-            },
-            onDragEnd: (targetIndex, targetDate) {
-              try {
-                isArrowConnecting.value = false;
-                final targetData = listData[parentIndex].subData[targetIndex];
-                final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
-                if (isTargetInRangeOfTwoOrigin(
-                      targetDate,
-                      targetData.dateStart.subtract(const Duration(days: 1)),
-                      targetData.dateEnd,
-                      rangeInDays: rangeInDays,
-                    ) &&
-                    targetIndex != subIndex) {
-                  listData[parentIndex]
-                      .subData[targetIndex]
-                      .addDependency(subData.id);
+        // End connector
+        arrowsConnector.add(
+          Positioned(
+            left: isSelected
+                ? (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                        widthPerDay +
+                    connectorSize * 1.5
+                : (subData.dateEnd.difference(firstDateShown).inDays + 1) *
+                        widthPerDay +
+                    1.5,
+            top: subData.getIndexFromEntireData(listData) * heightPerRow +
+                heightPerRow / 2 -
+                connectorSize / 2,
+            child: ArrowConnector(
+              widthPerDay: widthPerDay,
+              heightPerRow: heightPerRow,
+              size: connectorSize,
+              connectorColor: connectorColor,
+              originIndex: subIndex,
+              originDateStart: subData.dateStart,
+              originDateEnd: subData.dateEnd,
+              isStart: false,
+              onDragStart: () {
+                isArrowConnecting.value = true;
+                onArrowStartConnecting();
+              },
+              onDragEnd: (targetIndex, targetDate) {
+                try {
+                  isArrowConnecting.value = false;
+                  final targetData = listData[parentIndex].subData[targetIndex];
+                  final isTargetSelected = selectedIndex ==
+                      GanttSubData.getUniqueIndex(parentIndex, targetIndex);
+                  final additionalDays = !isTargetSelected
+                      ? const Duration(days: 0)
+                      : switch (mode) {
+                          GanttMode.daily => const Duration(days: 1),
+                          GanttMode.weekly => const Duration(days: 1),
+                          GanttMode.monthly => const Duration(days: 3),
+                        };
+                  final rangeInDays = (mode == GanttMode.monthly) ? 3 : 1;
+                  if (isTargetInRangeOfTwoOrigin(
+                        targetDate,
+                        targetData.dateStart.subtract(additionalDays),
+                        targetData.dateEnd.add(additionalDays),
+                        rangeInDays: rangeInDays,
+                      ) &&
+                      targetIndex != subIndex) {
+                    listData[parentIndex]
+                        .subData[targetIndex]
+                        .addDependency(subData.id);
+                  }
+                  onArrowConnected();
+                } catch (e) {
+                  print('Error: $e');
                 }
-                onArrowConnected();
-              } catch (e) {
-                print('Error: $e');
-              }
-            },
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
 
       // Generate arrows for each subData dependencies
       for (String dependency in subData.dependencies) {
@@ -171,19 +201,26 @@ List<Widget> generateArrows(
           final pointedIndex = pointedSubData.getIndexFromEntireData(listData);
 
           arrows.add(
-            CustomPaint(
-              painter: ArrowPainter(
-                dependentSubData: dependentSubData,
-                dependentIndex: dependentIndex,
-                pointedSubData: pointedSubData,
-                pointedIndex: pointedIndex,
-                widthPerDay: widthPerDay,
-                heightPerRow: heightPerRow,
-                indicatorWidth: indicatorWidth,
-                firstDateShown: firstDateShown,
-                arrowColor: arrowColor,
-                arrowSize: arrowSize,
-                isSelected: isSelected,
+            GestureDetector(
+              onLongPress: () {
+                subData.removeDependency(dependency);
+                arrowState.value = !arrowState.value;
+              },
+              child: CustomPaint(
+                painter: ArrowPainter(
+                  dependentSubData: dependentSubData,
+                  dependentIndex: dependentIndex,
+                  pointedSubData: pointedSubData,
+                  pointedIndex: pointedIndex,
+                  widthPerDay: widthPerDay,
+                  heightPerRow: heightPerRow,
+                  indicatorWidth: indicatorWidth,
+                  firstDateShown: firstDateShown,
+                  arrowColor: arrowColor,
+                  arrowSize: arrowSize,
+                  isSelected: isSelected,
+                ),
+                child: Container(),
               ),
             ),
           );

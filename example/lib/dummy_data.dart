@@ -16,7 +16,7 @@ class DummyData {
       }
 
       return Task(
-        name: 'Task $index',
+        name: 'Task $counter',
         start: DateTime(2024, 10, 1).add(Duration(days: counter)),
         end: DateTime.now().add(Duration(days: counter + 10)),
       );

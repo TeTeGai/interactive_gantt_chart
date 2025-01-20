@@ -5,6 +5,8 @@ import '../interactive_gantt_chart.dart';
 class ArrowPainter extends CustomPainter {
   final GanttSubData dependentSubData;
 
+  late Path path;
+
   /// The index of the dependent data from the top of the list
   final int dependentIndex;
   final GanttSubData pointedSubData;
@@ -19,7 +21,7 @@ class ArrowPainter extends CustomPainter {
   final Color arrowColor;
   final bool isSelected;
 
-  const ArrowPainter({
+  ArrowPainter({
     required this.dependentSubData,
     required this.dependentIndex,
     required this.pointedSubData,
@@ -31,10 +33,7 @@ class ArrowPainter extends CustomPainter {
     required this.firstDateShown,
     required this.arrowColor,
     this.isSelected = false,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
+  }) {
     final startX =
         (dependentSubData.dateEnd.difference(firstDateShown).inDays + 1) *
             widthPerDay;
@@ -54,12 +53,8 @@ class ArrowPainter extends CustomPainter {
     } else {
       midPointY = endY - heightPerRow / 2;
     }
-    final paint = Paint()
-      ..color = arrowColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = arrowSize / 2;
 
-    final path = Path()..moveTo(startX, startY);
+    path = Path()..moveTo(startX, startY);
 
     if (midPointX < startX + indicatorWidth + 5) {
       path
@@ -80,10 +75,23 @@ class ArrowPainter extends CustomPainter {
       ..moveTo((endX - indicatorWidth) - arrowSize, endY - arrowSize)
       ..lineTo((endX - indicatorWidth), endY)
       ..lineTo((endX - indicatorWidth) - arrowSize, endY + arrowSize);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = arrowColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = arrowSize / 2;
 
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  bool? hitTest(Offset position) {
+    return path.contains(position);
+  }
 }
