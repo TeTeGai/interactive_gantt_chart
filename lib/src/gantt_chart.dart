@@ -90,6 +90,9 @@ class GanttChart<T, S> extends StatefulWidget {
   /// Builder for the task label
   final Widget Function(String textLabel, int index)? taskLabelBuilder;
 
+  /// Disable the horizontal drag of chart elements
+  final bool enableHorizontalDrag;
+
   final void Function(
     GanttData<T, S> newData,
     int index,
@@ -97,6 +100,7 @@ class GanttChart<T, S> extends StatefulWidget {
   )? onDragEnd;
 
   /// Function that called when certain label reordered.
+  /// Function will not be called if [enableReorder] is set to false.
   /// [orderedIndex] is the index of the label that is reordered,
   /// [targetIndex] is the index of the label that is the target of the reorder,
   /// [targetIndex] returns -1 if the label is not reordered to a valid location.
@@ -104,6 +108,12 @@ class GanttChart<T, S> extends StatefulWidget {
     int orderedIndex,
     int targetIndex,
   )? onReordered;
+
+  /// Enable the reorder feature of rows. Default is true
+  final bool enableReorder;
+
+  /// Enable the resizing feature of the label section. Default is true
+  final bool enableResizing;
 
   const GanttChart({
     super.key,
@@ -128,6 +138,9 @@ class GanttChart<T, S> extends StatefulWidget {
     this.draggableStartIndicatorBuilder,
     this.dragIndicatorWidth = 14.0,
     this.onDragEnd,
+    this.enableHorizontalDrag = true,
+    this.enableReorder = true,
+    this.enableResizing = true,
     this.labelText = 'Projects',
     this.showLabelOnChartBar = true,
     this.chartBarColor = Colors.blue,
@@ -423,32 +436,36 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                               index: selectedLabelIValue,
                                               data: data,
                                             ),
-                                            GestureDetector(
-                                              onVerticalDragEnd: (details) {
-                                                final newIndex =
-                                                    getReorderingDestinationIndex(
-                                                  listData: widget.data,
-                                                  currentIndex:
-                                                      selectedLabelIValue,
-                                                  details: details,
-                                                  heightPerRow:
-                                                      widget.heightPerRow,
-                                                  rowSpacing: widget.rowSpacing,
-                                                );
 
-                                                widget.onReordered?.call(
-                                                  selectedLabelIValue,
-                                                  newIndex,
-                                                );
+                                            /// Show reorder indicator if reordering is enabled
+                                            if (widget.enableReorder)
+                                              GestureDetector(
+                                                onVerticalDragEnd: (details) {
+                                                  final newIndex =
+                                                      getReorderingDestinationIndex(
+                                                    listData: widget.data,
+                                                    currentIndex:
+                                                        selectedLabelIValue,
+                                                    details: details,
+                                                    heightPerRow:
+                                                        widget.heightPerRow,
+                                                    rowSpacing:
+                                                        widget.rowSpacing,
+                                                  );
 
-                                                setState(() {
-                                                  if (newIndex != -1) {
-                                                    final temp = widget.data
-                                                        .removeAt(
-                                                            selectedLabelIValue);
-                                                    selectedLabelI.value =
-                                                        newIndex;
-                                                    selectedTaskIndex.value =
+                                                  widget.onReordered?.call(
+                                                    selectedLabelIValue,
+                                                    newIndex,
+                                                  );
+
+                                                  setState(() {
+                                                    if (newIndex != -1) {
+                                                      final temp = widget.data
+                                                          .removeAt(
+                                                              selectedLabelIValue);
+                                                      selectedLabelI.value =
+                                                          newIndex;
+                                                      selectedTaskIndex.value =
                                                         newIndex;
                                                     widget.data
                                                         .insert(newIndex, temp);
@@ -487,6 +504,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 right: 0,
                 child: GestureDetector(
                   onHorizontalDragUpdate: (details) {
+                    if (!widget.enableResizing) return;
                     final newWidth = labelWidth.value + details.delta.dx;
                     if (newWidth > 50 && newWidth < constraints.maxWidth / 2) {
                       labelWidth.value = newWidth;
@@ -896,6 +914,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 onHorizontalDragEnd: !isSelected
                     ? null
                     : (details) {
+                        /// Check if horizontal drag is enabled
+                        if (!widget.enableHorizontalDrag) {
+                          return;
+                        }
+
                         setState(() {
                           data.calculateAllDate(newStart, newEnd);
                         });
@@ -908,6 +931,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 onHorizontalDragUpdate: !isSelected
                     ? null
                     : (details) {
+                        /// Check if horizontal drag is enabled
+                        if (!widget.enableHorizontalDrag) {
+                          return;
+                        }
+
                         moveEntireBar(
                           deltaDX: details.delta.dx,
                           startDistance: startDistance.value,
@@ -1028,6 +1056,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                 onHorizontalDragEnd: !isSelected
                                     ? null
                                     : (details) {
+                                        /// Check if horizontal drag is enabled
+                                        if (!widget.enableHorizontalDrag) {
+                                          return;
+                                        }
+
                                         setState(
                                           () {
                                             widget.data[index]
@@ -1046,6 +1079,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                 onHorizontalDragUpdate: !isSelected
                                     ? null
                                     : (details) {
+                                        /// Check if horizontal drag is enabled
+                                        if (!widget.enableHorizontalDrag) {
+                                          return;
+                                        }
+
                                         isDragging.value = true;
 
                                         moveEntireBar(
@@ -1198,6 +1236,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 onHorizontalDragEnd: !isSelected
                     ? null
                     : (details) {
+                        /// Check if horizontal drag is enabled
+                        if (!widget.enableHorizontalDrag) {
+                          return;
+                        }
+
                         setState(() {
                           data.calculateMainDate();
                         });
@@ -1211,6 +1254,11 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 onHorizontalDragUpdate: !isSelected
                     ? null
                     : (details) {
+                        /// Check if horizontal drag is enabled
+                        if (!widget.enableHorizontalDrag) {
+                          return;
+                        }
+
                         isIndicatorDragging.value = true;
 
                         final delta = details.localPosition.dx;
