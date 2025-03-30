@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import '../interactive_gantt_chart.dart';
 
 class ArrowPainter extends CustomPainter {
-  final GanttSubData dependentSubData;
 
   late Path path;
 
   /// The index of the dependent data from the top of the list
   final int dependentIndex;
-  final GanttSubData pointedSubData;
 
   /// The index of the pointed data from the top of the list
   final int pointedIndex;
@@ -22,9 +20,7 @@ class ArrowPainter extends CustomPainter {
   final bool isSelected;
 
   ArrowPainter({
-    required this.dependentSubData,
     required this.dependentIndex,
-    required this.pointedSubData,
     required this.pointedIndex,
     required this.widthPerDay,
     required this.heightPerRow,
@@ -35,14 +31,13 @@ class ArrowPainter extends CustomPainter {
     this.isSelected = false,
   }) {
     final startX =
-        (dependentSubData.dateEnd.difference(firstDateShown).inDays + 1) *
             widthPerDay;
     final startY = dependentIndex * heightPerRow + heightPerRow / 2;
     final endX = isSelected
-        ? pointedSubData.dateStart.difference(firstDateShown).inDays *
+        ?
                 widthPerDay -
             indicatorWidth * 1.5
-        : pointedSubData.dateStart.difference(firstDateShown).inDays *
+        :
             widthPerDay;
     final endY = pointedIndex * heightPerRow + heightPerRow / 2;
 

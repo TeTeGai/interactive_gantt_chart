@@ -38,48 +38,11 @@ class _MyHomePageState extends State<MyHomePage> {
       dateEnd: task.end,
       data: task,
       label: task.name,
-      subData: [
-        GanttSubData(
-          id: GanttSubData.generateId(),
-          dateStart: task.start.add(const Duration(days: 1)),
-          dateEnd: task.end,
-          data: 'Sub ${task.name}',
-          label: 'Sub ${task.name} 1',
-        ),
-        GanttSubData(
-          id: GanttSubData.generateId(),
-          dateStart: task.start.add(const Duration(days: 1)),
-          dateEnd: task.end,
-          data: 'Sub ${task.name}',
-          label: 'Sub ${task.name} 2',
-        ),
-      ],
     );
   }).toList();
 
   @override
   void initState() {
-    final firstData = ganttData.first;
-    firstData.subData.add(
-      GanttSubData<String>(
-        id: GanttSubData.generateId(),
-        dateStart: ganttData[0].data.start,
-        dateEnd: ganttData[0].data.end,
-        data: ganttData[0].label,
-        label: ganttData[0].data.name,
-      ),
-    );
-    firstData.subData.add(
-      GanttSubData<String>(
-        id: GanttSubData.generateId(),
-        dateStart: ganttData[0].data.start,
-        dateEnd: ganttData[0].data.end,
-        data: ganttData[0].label,
-        label: ganttData[0].data.name,
-      ),
-    );
-    // firstData.subData[1].addDependency(firstData.subData[0].id);
-    // firstData.subData[2].addDependency(firstData.subData[0].id);
     super.initState();
   }
 
@@ -90,22 +53,14 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Center(
           child: Column(
             children: [
-              const Text('Hello, Gantt!'),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: GanttChart<Task, String>(
-                    onReordered: (orderedIndex, newIndex) {
-                      /// DON'T MANUALLY REORDER THE DATA!
-                      /// Reordering data already handled by the package and only caused some strange behavior if reordered manually
-                      // if (newIndex == -1) return;
-                      // final data = ganttData[orderedIndex];
-                      // ganttData.removeAt(orderedIndex);
-                      // ganttData.insert(newIndex, data);
-                    },
                     connectorColor: Colors.deepPurple,
                     gridLineColor: Colors.grey,
                     tableOuterColor: Colors.grey,
+                    initialLabelWidth: 250,
                     dayLabelStyle: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -113,7 +68,14 @@ class _MyHomePageState extends State<MyHomePage> {
                     taskLabelBuilder: (textLabel, index) {
                       return Container(
                         alignment: Alignment.center,
-                        child: Text(textLabel),
+                        width: 70,
+                        child: Row(
+                          children: [
+                            Text(textLabel.name),
+                            Text(textLabel.name)
+                            ,Text(textLabel.name)
+                          ],
+                        ),
                       );
                     },
                     onInitScrollToCurrentDate: true,
