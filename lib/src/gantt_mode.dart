@@ -1,4 +1,5 @@
 enum GanttMode {
+  day('Day'),
   daily('Daily'),
   weekly('Weekly'),
   monthly('Monthly'),

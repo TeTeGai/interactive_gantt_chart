@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:interactive_gantt_chart/src/gantt_data.dart';
 import 'package:interactive_gantt_chart/src/gantt_mode.dart';
@@ -13,6 +15,7 @@ class GanttChart<T, S> extends StatefulWidget {
   final GanttMode ganttMode;
 
   /// Width of each day in the chart
+  final double widthPerDay;
   final double widthPerDayDaily;
   final double widthPerDayWeekly;
   final double widthPerDayMonthly;
@@ -119,6 +122,7 @@ class GanttChart<T, S> extends StatefulWidget {
     required this.data,
     this.ganttMode = GanttMode.daily,
     this.tableOuterColor = Colors.black,
+    this.widthPerDay =  65.0,
     this.widthPerDayDaily = 45.0,
     this.widthPerDayWeekly = 25.0,
     this.widthPerDayMonthly = 5.0,
@@ -230,10 +234,12 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
 
   void changeGanttMode(GanttMode newGanttMode) {
     widthPerDay = switch (newGanttMode) {
+      GanttMode.day => widget.widthPerDay,
       GanttMode.daily => widget.widthPerDayDaily,
       GanttMode.weekly => widget.widthPerDayWeekly,
       GanttMode.monthly => widget.widthPerDayMonthly,
     };
+
     setState(() => ganttMode = newGanttMode);
   }
 
@@ -303,29 +309,33 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                   return SizedBox(
                     width: constraints.maxWidth - labelWidthValue,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            // Date label for Years & month
-                            _buildYearMonthLabel(constraints),
-                            Expanded(
-                              child: Container(
-                                alignment: Alignment.bottomRight,
-                                child: DropdownButton<GanttMode>(
-                                  items: GanttMode.values.map((mode) {
-                                    return DropdownMenuItem(
-                                      value: mode,
-                                      child: Text(mode.name),
-                                    );
-                                  }).toList(),
-                                  value: ganttMode,
-                                  onChanged: (value) => {
-                                    if (value != null) changeGanttMode(value)
-                                  },
+                        SizedBox(
+                          height: 50,
+                          child: Row(
+                            children: [
+                              // Date label for Years & month
+                              _buildYearMonthLabel(constraints),
+                              Expanded(
+                                child: Container(
+                                  alignment: Alignment.topRight,
+                                  child: DropdownButton<GanttMode>(
+                                    items: GanttMode.values.map((mode) {
+                                      return DropdownMenuItem(
+                                        value: mode,
+                                        child: Text(mode.name),
+                                      );
+                                    }).toList(),
+                                    value: ganttMode,
+                                    onChanged: (value) => {
+                                      if (value != null) changeGanttMode(value)
+                                    },
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
                         // Draw all gant chart here
@@ -371,7 +381,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 child: Column(
                   children: [
                     SizedBox(
-                      height: widget.heightPerRow * 1.5,
+                      height: widget.heightPerRow * 0.5 + 50,
                       child: widget.headerTitle
                     ),
                     Expanded(
@@ -641,8 +651,38 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         labelText =
             '${DateFormat('MMM').format(currentDate)} ${currentDate.year}';
         labelWidth = widthPerDay * daysToShow;
-      }
+      }else if (ganttMode == GanttMode.day) {
 
+        for (int hour = 0; hour < 24; hour++) {
+          DateTime hourDate = currentDate.add(Duration(hours: hour));
+          String hourLabelText = '$hour:00'; // Hiển thị giờ như "0:00", "1:00", ...
+          // Tính chiều rộng cho từng giờ
+          double hourLabelWidth = widthPerDay ;
+
+          labelWidgets.add(
+            Tooltip(
+              message: DateFormat('dd MMM yyyy HH:mm').format(hourDate), // Tooltip chi tiết
+              child: Container(
+                width: hourLabelWidth,
+                height: dayLabelHeight,
+                decoration: BoxDecoration(
+                  color: widget.chartBarColor,
+                  border: Border(
+                    right: BorderSide(color: widget.tableOuterColor),
+                    bottom: BorderSide(color: widget.tableOuterColor),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '${DateFormat('dd/MM').format(currentDate)}\n$hourLabelText',
+                    style: widget.dayLabelStyle,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }
       final tooltipMessage = switch (ganttMode) {
         GanttMode.weekly =>
           '${DateFormat('dd MMM yyyy').format(currentDate)} - ${DateFormat('dd MMM yyyy').format(currentDate.add(Duration(days: daysToShow - 1)))}',
@@ -697,7 +737,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
     return Container(
       width: constraints.maxWidth - labelWidth.value,
       height: realChartHeight > constraints.maxHeight - widget.heightPerRow
-          ? constraints.maxHeight - widget.heightPerRow
+          ? constraints.maxHeight - widget.heightPerRow + 40
           : realChartHeight,
       decoration: BoxDecoration(
         border: Border.all(color: widget.tableOuterColor),
@@ -738,8 +778,15 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                       width: maxChartWidth,
                       child: Column(
                         children: [
-                          Row(
-                            children: labelWidgets,
+                          SizedBox(
+                            height: dayLabelHeight, // Chiều cao cố định
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: labelWidgets.length,
+                              itemBuilder: (context, index) {
+                                return labelWidgets[index];
+                              },
+                            ),
                           ),
                           Expanded(
                             child: Stack(
@@ -821,23 +868,22 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                                       itemCount: widget.data.length,
                                       itemBuilder: (context, index) {
                                         final data = widget.data[index];
-                                        final duration = data.dateEnd
-                                                .difference(data.dateStart)
-                                                .inDays +
-                                            1;
-                                        final width = duration * widthPerDay;
-                                        final startDistance = ValueNotifier(data
-                                                .dateStart
-                                                .difference(firstStartDate)
-                                                .inDays *
-                                            widthPerDay);
+                                        final durationInHours = max(
+                                            data.dateEnd.difference(data.dateStart).inHours.toDouble(),
+                                            1.0
+                                        );
+                                        final double width = durationInHours * (widthPerDay / 24.0);
+
+                                        final startDistance = ValueNotifier<double>(
+                                            data.dateStart.difference(firstStartDate.copyWith(hour: 0,minute: 0)).inHours.toDouble() * (widthPerDay / 24.0));
 
                                         return Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            SizedBox(
+                                            Container(
                                               height: widget.heightPerRow,
+                                              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey))),
                                               child: Stack(
                                                 alignment: Alignment.center,
                                                 children: [
@@ -893,6 +939,9 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
         return ValueListenableBuilder(
           valueListenable: startDistance,
           builder: (context, startDistanceValue, _) {
+            // print('index:$index : $startDistanceValue');
+            // print('width:$index : $width');
+
             return AnimatedPositioned(
               duration: widget.animationDuration,
               left: startDistanceValue,
@@ -921,6 +970,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                           details,
                         );
                       },
+
                 onHorizontalDragUpdate: !isSelected
                     ? null
                     : (details) {
@@ -949,7 +999,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
                 child: Tooltip(
                   textAlign: TextAlign.center,
                   message:
-                      '${data.label}\n${DateFormat('dd MMM yyyy').format(data.dateStart)} - ${DateFormat('dd MMM yyyy').format(data.dateEnd)}',
+                  '${data.label}\n${data.dateStart} - ${data.dateEnd}',
                   child: Container(
                     width: width,
                     height: widget.heightPerRow - widget.rowSpacing,
@@ -995,6 +1045,7 @@ class _GanttChartState<T, S> extends State<GanttChart<T, S>> {
               );
             },
           ),
+          if(ganttMode == GanttMode.daily  )
           ValueListenableBuilder(
             valueListenable: dateLabel,
             builder: (_, value, __) {

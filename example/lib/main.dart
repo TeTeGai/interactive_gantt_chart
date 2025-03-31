@@ -61,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     gridLineColor: Colors.grey,
                     tableOuterColor: Colors.grey,
                     initialLabelWidth: 250,
+                    heightPerRow: 90,
                     dayLabelStyle: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
